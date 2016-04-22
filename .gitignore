@@ -2,3 +2,13 @@
 !.gitignore
 
 *.o
+
+# build output files
+avb-demoapps/avblauncher/avblauncher
+avb-demoapps/demo/simple/simple_listener
+avb-demoapps/demo/simple/simple_talker
+avb-demoapps/lib/avtp/libavtp.a
+avb-demoapps/lib/eavb/libeavb.a
+avb-demoapps/lib/msrp/libmsrp.a
+avb-demoapps/mrpdummy/mrpdummy
+avbtool/avbtool

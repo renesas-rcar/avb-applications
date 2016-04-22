@@ -1,0 +1,21 @@
+MSRP with mrpd client helper library
+==================
+
+The code is MSRP with mrpd client helper.
+
+Following files are based on Open-AVB
+
+  https://github.com/AVnu/Open-AVB
+  open-avb-next 20731bd82d2b2e59387f7b3a61fc0370c93ec568
+  - daemons/mrpd/mrpd.h
+  - examples/mrp_client/mrpdclient.c
+  - examples/mrp_client/mrpdclient.h
+  - examples/mrp_client/mrpdhelper.c
+  - examples/mrp_client/mrpdhelper.h
+
+This library was tested in combination with the following program.
+
+  https://github.com/AVnu/Open-AVB
+  open-avb-next 20731bd82d2b2e59387f7b3a61fc0370c93ec568
+  - daemons/mrpd/mrpd 
+  (* It was built by the user.)

@@ -1,0 +1,18 @@
+This folder contains Renesas AVB demo softwares.
+
+The software include in following component
+
+- demo: Simple demo streaming application.
+  - lib/avtp: AVTP (IEEE 1722) packetize helper library.
+  - lib/msrp: SRP (IEEE 802.1Qat) with mrpd (in Open-AVB) helper library.
+  - lib/eavb: Renesas AVB Streaming driver interface helper library.
+- mrpdummy: Simple mrpd client.
+- avblauncher: Launcher application for Protocol daemons and streaming application.
+  - inih: Ben Hoyt's INI parser library.
+
+These softwares are released under the MIT or BSD Licenses,
+see following files.
+
+* libmsrp: BSD, see lib/msrp/LICENSE.BSD
+* inih: BSD, see avblauncher/inih/LICENSE.txt
+* other: MIT, see COPYING.MIT

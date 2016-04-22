@@ -1,0 +1,10 @@
+all: all.subdirs
+clean: clean.subdirs
+install: install.subdirs
+
+.PHONY: all clean install
+
+%.subdirs:
+	@for subdir in $(subdirs); do \
+		$(MAKE) -C $${subdir} $(basename $@);\
+	done

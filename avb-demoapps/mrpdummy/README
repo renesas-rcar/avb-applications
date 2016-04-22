@@ -1,0 +1,26 @@
+Simple mrpd client
+==================
+
+These programs are simple mrpd clients.
+
+* mrpdummy
+
+mrpdummy
+============
+
+How to Use it
+-------------
+
+* running mrpd (eg. mrpd -dlmvs -i eth0)
+* run mrpdummy
+
+Examples for mrpdummy
+-------------------------
+
+Run as a Talker
+
+  mrpdummy -m 0 -S 7690500000000001 -A 91e0f0000e80 -Z 84 -I 1 -L 3900
+
+Run as a Listener
+
+  mrpdummy -m 1 -S 7690500000000001

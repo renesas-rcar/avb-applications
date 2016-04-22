@@ -1,0 +1,5 @@
+This folder contains avbtool and config files.
+avbtool is simple utility tool for configuration of the Renesas AVB Streaming driver,
+see https://github.com/renesas-rcar/avb-streaming
+
+This software is released under the MIT License, see COPYING.MIT.
