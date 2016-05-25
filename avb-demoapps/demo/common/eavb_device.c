@@ -24,12 +24,11 @@ static int eavb_device_get_separation_filter(
 		return -1;
 
 	ret = eavb_get_rxparam(dev->fd, &rxparam);
-	if (!ret) {
-		for (i = 0; i < AVTP_STREAMID_SIZE; i++)
-			streamid[i] = rxparam.streamid[i];
-	} else {
-		ret = -1;
-	}
+	if (ret < 0)
+		return ret;
+
+	for (i = 0; i < AVTP_STREAMID_SIZE; i++)
+		streamid[i] = rxparam.streamid[i];
 
 	return ret;
 }
