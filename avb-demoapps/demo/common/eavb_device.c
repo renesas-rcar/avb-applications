@@ -20,6 +20,9 @@ static int eavb_device_get_separation_filter(
 	int i;
 	struct eavb_rxparam rxparam;
 
+	if (!dev)
+		return -1;
+
 	ret = eavb_get_rxparam(dev->fd, &rxparam);
 	if (!ret) {
 		for (i = 0; i < AVTP_STREAMID_SIZE; i++)
@@ -34,7 +37,12 @@ static int eavb_device_get_separation_filter(
 static int eavb_device_take_entry(struct eavb_device *dev, int count)
 {
 	int ret, tmp;
-	char *buf = dev->entryworkbuf;
+	char *buf;
+
+	if (!dev)
+		return -1;
+
+	buf = dev->entryworkbuf;
 
 	ret = eavb_take(dev->fd, (struct eavb_entry *)buf, count);
 
@@ -68,8 +76,13 @@ static int eavb_device_take_entry(struct eavb_device *dev, int count)
 static int eavb_device_push_entry(struct eavb_device *dev, int count)
 {
 	int ret, tmp;
-	char *buf = dev->entryworkbuf;
+	char *buf;
 	void *from, *to;
+
+	if (!dev)
+		return -1;
+
+	buf = dev->entryworkbuf;
 
 	if (dev->wp + count > dev->entrynum) {
 		tmp = dev->entrynum - dev->wp;
@@ -112,6 +125,9 @@ struct eavb_device *eavb_device_new(char *name, int entrynum, mode_t mode)
 {
 	struct eavb_device *dev;
 	int fd = -1;
+
+	if (!name)
+		return NULL;
 
 	dev = calloc(1, sizeof(*dev));
 	if (!dev)
@@ -168,6 +184,9 @@ error:
 
 void eavb_device_free(struct eavb_device *dev)
 {
+	if (!dev)
+		return;
+
 	if (dev->framebuf)
 		free(dev->framebuf);
 	if (dev->entryworkbuf)
