@@ -254,10 +254,18 @@ static struct eavb_device *eavb_device_new_for_listener
 {
 	struct eavb_device *dev;
 	int ret;
+	struct eavb_rxparam rxparam;
 
 	dev = eavb_device_new(name, entrynum, O_RDWR);
 	if (!dev)
 		return NULL;
+
+	/* verify that the specified device is avb_rx device */
+	ret = eavb_get_rxparam(dev->fd, &rxparam);
+	if (ret < 0) {
+		PRINTF("[AVB] cannot get rxparam from %s, should be specified avb_rx device file", name);
+		goto error;
+	}
 
 	/* allocate ether frame buffer and prepare hader */
 	{
