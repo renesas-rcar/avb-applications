@@ -29,6 +29,7 @@ struct app_config {
 	clockid_t          clkid;
 	int                uid;
 	uint8_t            StreamID[AVTP_STREAMID_SIZE];
+	uint8_t            dest_addr[ETH_ALEN];
 	uint8_t            source_addr[ETH_ALEN];
 	uint16_t           MaxFrameSize;
 	uint16_t           payload_size;
@@ -37,6 +38,7 @@ struct app_config {
 	int                speed;
 	int                msrp;
 	int                waitmode;
+	bool               use_dest_addr;
 	struct eavb_device *device;
 };
 

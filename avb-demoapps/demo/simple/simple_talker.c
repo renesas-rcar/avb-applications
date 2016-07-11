@@ -47,7 +47,7 @@ static int show_version(struct app_config *cfg)
 	return 0;
 }
 
-static const char *optstring = "c:i:p:u:s:f:F:n:m:w:h";
+static const char *optstring = "c:i:p:u:s:f:F:n:m:w:a:h";
 static const struct option long_options[] = {
 	{"class",             required_argument, NULL, 'c'},
 	{"interface",         required_argument, NULL, 'i'},
@@ -59,6 +59,7 @@ static const struct option long_options[] = {
 	{"frame-num",         required_argument, NULL, 'n'},
 	{"msrp",              required_argument, NULL, 'm'},
 	{"waitmode",          required_argument, NULL, 'w'},
+	{"dest-addr",         required_argument, NULL, 'a'},
 	{"version",           no_argument,       NULL,  1 },
 	{"help",              no_argument,       NULL, 'h'},
 	{NULL,                0,                 NULL,  0 },
@@ -67,31 +68,35 @@ static const struct option long_options[] = {
 static int show_usage(struct app_config *cfg)
 {
 	fprintf(stderr,
-			"usage: " PROGNAME " [options] -f <filename>\n"
-			"\n"
-			"options:\n"
-			"    -c, --class=SRCLASS         specify SRClassID A/B/C (default:'A')\n"
-			"    -i, --interface=IFNAME      specify network interface name (default:eth0)\n"
-			"    -p, --ptp=CLOCK             specify PTP clock name (default:/dev/ptp0)\n"
-			"    -u, --uid=UNIQUEID          specify UniqueID in StreamID (default:1)\n"
-			"    -s, --payload-size=SIZE     specify data payload size (default:100)\n"
-			"    -f, --file=NAME             specify file name\n"
-			"    -F, --frame-intervals=NUM   specify MaxIntervalFrames (default:1)\n"
-			"    -n, --frame-num=NUM         specify number of frames (default:0=infinite)\n"
-			"    -m, --msrp=MODE             MSRP mode 0:static 1:dynamic (default:1 dynamic)\n"
-			"    -w, --waitmode=MODE         specify wait mode (default:0 poll)\n"
-			"                                0:poll, 1:blocking(NOWAIT) 2:blocking(WAITALL)\n"
-			"    -h, --help                  display this help\n"
-			"        --version               print version information\n"
-			"\n"
-			"examples:\n"
-			" " PROGNAME
-			" -i eth1 -c A -u 1 -s 500 -n 0 -m 1 -f /tmp/test.bin\n"
-			" " PROGNAME
-			" -i eth1 -u 2 -n 80000 -m 1 -f /tmp/test.bin\n"
-			" " PROGNAME " -i eth1 -m 0 -f /tmp/test.bin\n"
-			"\n"
-			PROGNAME " version " PROGVERSION "\n");
+		"usage: " PROGNAME " [options] -f <filename>\n"
+		"\n"
+		"options:\n"
+		"    -c, --class=SRCLASS         specify SRClassID A/B/C (default:'A')\n"
+		"    -i, --interface=IFNAME      specify network interface name (default:eth0)\n"
+		"    -p, --ptp=CLOCK             specify PTP clock name (default:/dev/ptp0)\n"
+		"    -u, --uid=UNIQUEID          specify UniqueID in StreamID (default:1)\n"
+		"    -s, --payload-size=SIZE     specify data payload size (default:100)\n"
+		"    -f, --file=NAME             specify file name\n"
+		"    -F, --frame-intervals=NUM   specify MaxIntervalFrames (default:1)\n"
+		"    -n, --frame-num=NUM         specify number of frames (default:0=infinite)\n"
+		"    -m, --msrp=MODE             MSRP mode 0:static 1:dynamic (default:1 dynamic)\n"
+		"    -w, --waitmode=MODE         specify wait mode (default:0 poll)\n"
+		"                                0:poll, 1:blocking(NOWAIT) 2:blocking(WAITALL)\n"
+		"    -a, --dest-addr=DEST_ADDR   specify destination MAC address\n"
+		"                                (default:%02x:%02x:%02x:%02x:%02x:XX, XX=UniqueID(lower 8 bits))\n"
+		"    -h, --help                  display this help\n"
+		"        --version               print version information\n"
+		"\n"
+		"examples:\n"
+		" " PROGNAME
+		" -i eth1 -c A -u 1 -s 500 -n 0 -m 1 -f /tmp/test.bin\n"
+		" " PROGNAME
+		" -i eth1 -u 2 -n 80000 -m 1 -f /tmp/test.bin\n"
+		" " PROGNAME " -i eth1 -m 0 -f /tmp/test.bin\n"
+		"\n"
+		PROGNAME " version " PROGVERSION "\n",
+		dest_addr[0], dest_addr[1], dest_addr[2],
+		dest_addr[3], dest_addr[4]);
 	return 0;
 }
 
@@ -114,6 +119,7 @@ static int config_init(struct app_config *cfg)
 	cfg->framenums = 0;
 	cfg->msrp = MSRP_ON;
 	cfg->waitmode = WAIT_MODE_POLL;
+	memcpy(cfg->dest_addr, dest_addr, ETH_ALEN);
 
 	return 0;
 }
@@ -151,7 +157,7 @@ static int config_parse_fname(char *name)
 
 static int config_parse(struct app_config *cfg, int argc, char **argv)
 {
-	int c, i;
+	int c, i, ret;
 	int option_index = 0;
 	char *iname = NULL;
 	char *fname = NULL;
@@ -210,6 +216,17 @@ static int config_parse(struct app_config *cfg, int argc, char **argv)
 			break;
 		case 'w':
 			cfg->waitmode = atoi(optarg);
+			break;
+		case 'a':
+			ret = sscanf(optarg, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+				     &cfg->dest_addr[0], &cfg->dest_addr[1],
+				     &cfg->dest_addr[2], &cfg->dest_addr[3],
+				     &cfg->dest_addr[4], &cfg->dest_addr[5]);
+			if (ret != ETH_ALEN) {
+				PRINTF1("[AVB] Conversion failed mac addr.\n");
+				return -1;
+			}
+			cfg->use_dest_addr = true;
 			break;
 		case 1:
 			show_version(cfg);
@@ -415,8 +432,9 @@ static struct eavb_device *eavb_device_new_for_talker
 	memcpy(dev->StreamID, cfg->source_addr, ETH_ALEN);
 	dev->StreamID[6] = (id & 0xff00) >> 8;
 	dev->StreamID[7] = (id & 0x00ff);
-	memcpy(dev->dest_addr, dest_addr, ETH_ALEN);
-	dev->dest_addr[5] = dev->StreamID[7];
+	memcpy(dev->dest_addr, cfg->dest_addr, ETH_ALEN);
+	if (!cfg->use_dest_addr)
+		dev->dest_addr[5] = dev->StreamID[7];
 
 	{
 		struct avtp_simple_param param;
