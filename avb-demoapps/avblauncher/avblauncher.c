@@ -875,14 +875,15 @@ static int start_daemon(char *cmd_name, char *option, int opt_flag)
 		return 0;
 	}
 
-	if (opt_flag) {
-		pid = exe_command(cmd, NULL, NULL);
-		if (pid < 0) {
-			fprintf(stderr, "could not execute %s.\n", cmd_name);
-			return -1;
-		}
-		PRINTF("execute %s pid:[%d]\n", cmd_name, pid);
+	if (!opt_flag)
+		return -1;
+
+	pid = exe_command(cmd, NULL, NULL);
+	if (pid < 0) {
+		fprintf(stderr, "could not execute %s.\n", cmd_name);
+		return -1;
 	}
+	PRINTF("execute %s pid:[%d]\n", cmd_name, pid);
 
 	return 0;
 }
@@ -1258,14 +1259,13 @@ static int install_sighandler(int s, void (*handler)(int))
 
 static int check_and_update_ctx_data(
 	struct app_context *ctx,
-	int daemon_cl_shm_fd,
 	bool srp_daemon_started,
 	uint8_t *src_addr,
 	char *daemon_cl_shm_addr)
 {
 	int rc = 0;
 
-	if (ctx->use_gptp == true && daemon_cl_shm_fd == -1) {
+	if (ctx->use_gptp && !daemon_cl_shm_addr) {
 		fprintf(stderr,
 			"This context(%s) require gptp daemon but is not running.\n",
 			ctx->ini_name);
@@ -1294,14 +1294,7 @@ static int check_and_update_ctx_data(
 	}
 
 	memcpy(ctx->src_addr, src_addr, ETH_ALEN);
-
-	if (daemon_cl_shm_fd == -1) {
-		fprintf(stderr, "%s: daemon_cl_shm_fd is error\n",
-			ctx->ini_name);
-		ctx->err_flag = 1;
-	} else {
-		ctx->gptp_shm_addr = daemon_cl_shm_addr;
-	}
+	ctx->gptp_shm_addr = daemon_cl_shm_addr;
 
 	if (ctx->err_flag == 1)
 		return -1;
@@ -1408,8 +1401,8 @@ int main(int argc, char *argv[])
 
 	/* updating and error checking of a context */
 	for (i = 0; i < ctx_num; i++) {
-		rc = check_and_update_ctx_data(&ctx[i],
-				daemon_cl_shm_fd,
+		rc = check_and_update_ctx_data(
+				&ctx[i],
 				srp_daemon_started,
 				src_addr,
 				daemon_cl_shm_addr);
