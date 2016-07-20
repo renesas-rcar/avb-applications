@@ -19,12 +19,17 @@
 #define INI_SECTION_NAME "avblauncher"
 #define GPTP_DAEMON_CMD  "daemon_cl"
 #define SRP_DAEMON_CMD   "mrpd"
+#define MAAP_DAEMON_CMD  "maap_daemon"
 #define MRPDUMMY_CMD     "mrpdummy"
 
 #define MAXSTR  (INI_MAX_LINE)
 #define DEAMON_CL_SHM_SIZE (sizeof(struct gptp_time_data) + sizeof(pthread_mutex_t))
 #define DAEMON_CL_SHM_NAME "/ptp"
 #define DAEMON_CL_MAX_RETRY_NUM (5)
+
+#define MAAP_DAEMON_SHM_SIZE (sizeof(uint8_t) * ETH_ALEN)
+#define MAAP_DAEMON_SHM_KEY 1234
+#define MAAP_DAEMON_MAX_RETRY_NUM (5)
 
 #define DEBUG_LEVEL (1)
 #define PRINTF3(frmt, args...)  do { if (DEBUG_LEVEL > 2) printf(frmt, ## args); } while (0)
@@ -90,6 +95,7 @@ struct app_context {
 	enum MODE_TYPE operating_mode;
 	bool           use_gptp;
 	bool           use_srp;
+	bool           use_maap;
 	uint64_t       srclass;
 	uint64_t       srpriority;
 	uint64_t       vid;
@@ -106,6 +112,7 @@ struct app_context {
 	bool           err_flag;
 	pthread_t      thread;
 	char           *gptp_shm_addr;
+	char           *maap_shm_addr;
 	bool           required[IDX_MAX_NUM];
 	char           *ini_name;
 };

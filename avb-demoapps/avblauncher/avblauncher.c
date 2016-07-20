@@ -22,6 +22,8 @@
 #include <limits.h>
 #include <linux/if_ether.h>
 #include <errno.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 
 #include <inih/ini.h>
 
@@ -114,6 +116,7 @@ static int show_usage(void)
 		"    -g=CONFIG_FILE execute daemon_cl.\n"
 		"                   specify configuration file for daemon_cl.\n"
 		"    -m             execute mrpd\n"
+		"    -a             execute maap_daemon\n"
 		"    -i=IFNAME      specify network interface name (default:eth0)\n"
 		"    -h             display this help\n"
 		"\n"
@@ -183,6 +186,12 @@ static int ini2ctx_srp(struct app_context *ctx, const char *value)
 static int ini2ctx_destaddr(struct app_context *ctx, const char *value)
 {
 	int rc = 0;
+
+	if (strcasecmp("maap", value) == 0) {
+		ctx->use_maap = true;
+		return INI_SUCCESS;
+	}
+	ctx->use_maap = false;
 
 	rc = sscanf(value, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
 		&ctx->dest_addr[0], &ctx->dest_addr[1],
@@ -485,6 +494,7 @@ static void print_context(struct app_context *ctx)
 	PRINTF2("operating_mode : %d\n", ctx->operating_mode);
 	PRINTF2("use_gptp       : %d\n", ctx->use_gptp);
 	PRINTF2("use_srp        : %d\n", ctx->use_srp);
+	PRINTF2("use_maap       : %d\n", ctx->use_maap);
 	PRINTF2("srclass        : %" PRIu64 "\n", ctx->srclass);
 	PRINTF2("srpriority     : %" PRIu64 "\n", ctx->srpriority);
 	PRINTF2("vid            : %" PRIu64 "\n", ctx->vid);
@@ -852,6 +862,63 @@ static int wait_ascapable(struct app_context *ctx)
 	return -1;
 }
 
+static int open_maap_data(char **shared_mem_adr)
+{
+	int shmid;
+	char *ptr = NULL;
+
+	shmid = shmget(MAAP_DAEMON_SHM_KEY, MAAP_DAEMON_SHM_SIZE, 0);
+	if (shmid < 0) {
+		perror("shmget()");
+		return -1;
+	}
+
+	ptr = (char *)shmat(shmid, (void *)0, 0);
+	if (ptr == (char *)-1) {
+		perror("shmat()");
+		return -1;
+	}
+
+	*shared_mem_adr = ptr;
+
+	return 0;
+}
+
+static int get_maap_data(char *shared_mem_adr, uint8_t *dest_addr)
+{
+	if (!shared_mem_adr[0])
+		return -1;
+
+	memcpy(dest_addr, shared_mem_adr, MAAP_DAEMON_SHM_SIZE);
+
+	return 0;
+}
+
+static void close_maap_data(char *shared_mem_adr)
+{
+	if (!shared_mem_adr)
+		shmdt(shared_mem_adr);
+}
+
+static int wait_maap_addr(struct app_context *ctx)
+{
+	int rc = 0;
+
+	while (!sigint) {
+		rc = get_maap_data(ctx->maap_shm_addr, ctx->dest_addr);
+		if (rc == 0) {
+			PRINTF2("MAAP addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
+				ctx->dest_addr[0], ctx->dest_addr[1],
+				ctx->dest_addr[2], ctx->dest_addr[3],
+				ctx->dest_addr[4], ctx->dest_addr[5]);
+			return 0;
+		}
+		usleep(SLEEP_TIME);
+	}
+
+	return -1;
+}
+
 static int pidof(char *name)
 {
 	int rc = 0;
@@ -1188,6 +1255,15 @@ static int stop_stream_reservation(pid_t pid)
 
 static int start_application(struct app_context *ctx)
 {
+	int rc;
+
+	rc = convert_app_cmd(ctx);
+	if (rc < 0) {
+		fprintf(stderr, "%s: convert_app_cmd is error\n",
+			ctx->ini_name);
+		return -1;
+	}
+
 	return exe_command(ctx->app_cmd, NULL, NULL);
 }
 
@@ -1203,7 +1279,13 @@ static void streaming_thread(void *arg)
 			goto end;
 	}
 
-	if (ctx->operating_mode == LISTENER_MODE) {
+	if (ctx->operating_mode == TALKER_MODE) {
+		if (ctx->use_maap) {
+			rc = wait_maap_addr(ctx);
+			if (rc < 0)
+				goto end;
+		}
+	} else {
 		ctx->app_pid = start_application(ctx);
 		if (ctx->app_pid < 0) {
 			fprintf(stderr, "failed to execute application\n");
@@ -1261,7 +1343,8 @@ static int check_and_update_ctx_data(
 	struct app_context *ctx,
 	bool srp_daemon_started,
 	uint8_t *src_addr,
-	char *daemon_cl_shm_addr)
+	char *daemon_cl_shm_addr,
+	char *maap_daemon_shm_addr)
 {
 	int rc = 0;
 
@@ -1279,6 +1362,15 @@ static int check_and_update_ctx_data(
 		ctx->err_flag = 1;
 	}
 
+	if (ctx->use_maap &&
+	    ctx->operating_mode == TALKER_MODE &&
+	    !maap_daemon_shm_addr) {
+		fprintf(stderr,
+			"This context(%s) require maap daemon but is not running.\n",
+			ctx->ini_name);
+		ctx->err_flag = 1;
+	}
+
 	rc = context_error_check(ctx);
 	if (rc < 0) {
 		fprintf(stderr, "%s: context_error_check is error\n",
@@ -1286,15 +1378,9 @@ static int check_and_update_ctx_data(
 		ctx->err_flag = 1;
 	}
 
-	rc = convert_app_cmd(ctx);
-	if (rc < 0) {
-		fprintf(stderr, "%s: convert_app_cmd is error\n",
-			ctx->ini_name);
-		ctx->err_flag = 1;
-	}
-
 	memcpy(ctx->src_addr, src_addr, ETH_ALEN);
 	ctx->gptp_shm_addr = daemon_cl_shm_addr;
+	ctx->maap_shm_addr = maap_daemon_shm_addr;
 
 	if (ctx->err_flag == 1)
 		return -1;
@@ -1310,8 +1396,10 @@ int main(int argc, char *argv[])
 	int c;
 	int daemon_cl_shm_fd = -1;
 	int daemon_cl_retry_num = 0;
-	static char *daemon_cl_shm_addr;
+	char *daemon_cl_shm_addr = NULL;
 	bool srp_daemon_started = false;
+	int maap_daemon_retry_num = 0;
+	char *maap_daemon_shm_addr = NULL;
 	char *iname = NULL;
 	struct app_context *ctx = NULL;
 	struct connect_info *c_info = NULL;
@@ -1320,12 +1408,13 @@ int main(int argc, char *argv[])
 	bool opt_g = false;
 	char *gptp_config_file = NULL;
 	bool opt_m  = false;
+	bool opt_a  = false;
 	uint8_t src_addr[ETH_ALEN];
 
 	install_sighandler(SIGINT, sigint_handler);
 
 	/* process of command line option */
-	while (EOF != (c = getopt(argc, argv, "g:mhi:"))) {
+	while (EOF != (c = getopt(argc, argv, "g:mhai:"))) {
 		switch (c) {
 		case 'g':
 			opt_g = true;
@@ -1333,6 +1422,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'm':
 			opt_m = true;
+			break;
+		case 'a':
+			opt_a = true;
 			break;
 		case 'i':
 			iname = strdup(optarg);
@@ -1382,6 +1474,23 @@ int main(int argc, char *argv[])
 	if (start_daemon(SRP_DAEMON_CMD, cmd_option, opt_m) == 0)
 		srp_daemon_started = true;
 
+	/* run maap_daemon */
+	snprintf(cmd_option, MAXSTR, "-i %s", iname);
+	if (start_daemon(MAAP_DAEMON_CMD, cmd_option, opt_a) == 0) {
+		while (open_maap_data(&maap_daemon_shm_addr)) {
+			maap_daemon_retry_num++;
+			if (maap_daemon_retry_num ==
+			    MAAP_DAEMON_MAX_RETRY_NUM) {
+				fprintf(stderr,
+					"could not open shared memory of maap_daemon.\n");
+				return -1;
+			}
+			usleep(SLEEP_TIME);
+			fprintf(stderr, "retry to open maap data\n");
+		}
+		fprintf(stderr, "open maap data.\n");
+	}
+
 	/* create context */
 	argc -= optind;
 	argv += optind;
@@ -1405,7 +1514,8 @@ int main(int argc, char *argv[])
 				&ctx[i],
 				srp_daemon_started,
 				src_addr,
-				daemon_cl_shm_addr);
+				daemon_cl_shm_addr,
+				maap_daemon_shm_addr);
 		if (rc < 0)
 			fprintf(stderr, "%s included the error.\n",
 				ctx[i].ini_name);
@@ -1437,6 +1547,9 @@ int main(int argc, char *argv[])
 	/* close gptp data */
 	if (daemon_cl_shm_fd != -1)
 		close_gptp_data(daemon_cl_shm_fd, daemon_cl_shm_addr);
+
+	/* close maap data */
+	close_maap_data(maap_daemon_shm_addr);
 
 	/* leave vlan and srp domain */
 	disconnect_avb_network(c_info);
