@@ -703,7 +703,7 @@ static int wait_child_process(pid_t pid)
 	return WEXITSTATUS(status);
 }
 
-static pid_t command(char *argv[], int *infp, int *outfp)
+static pid_t exe_command(char *cmdline, int *infp, int *outfp)
 {
 	int p_stdin[2], p_stdout[2];
 	pid_t pid;
@@ -739,7 +739,7 @@ static pid_t command(char *argv[], int *infp, int *outfp)
 		close(p_stdout[READ]);
 		close(p_stdin[WRITE]);
 
-		rc = execvp(argv[0], argv);
+		rc = execlp("/bin/sh", "/bin/sh", "-c", cmdline, NULL);
 		if (rc < 0) {
 			perror("command");
 			close(p_stdout[READ]);
@@ -758,28 +758,6 @@ static pid_t command(char *argv[], int *infp, int *outfp)
 		*infp  = p_stdin[READ];
 
 	return pid;
-}
-
-static pid_t exe_command(char *cmdline, int *fd_r, int *fd_w)
-{
-	int i = 0;
-	char *argv[CMDNUM];
-	char *token;
-	size_t length = strlen(cmdline);
-
-	if (cmdline[length - 1] == '\n')
-		cmdline[length - 1] = '\0';
-
-	token = strtok(cmdline, " ");
-
-	while (token != NULL) {
-		argv[i] = token;
-		token = strtok(NULL, " ");
-		i++;
-	}
-	argv[i] = NULL;
-
-	return command(argv, fd_r, fd_w);
 }
 
 static int open_gptp_data(char *shm_name, int *daemon_cl_shm_fd,
