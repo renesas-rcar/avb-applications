@@ -296,11 +296,20 @@ static int convert_word(struct app_context *ctx, char *word, char *conv)
 	int rc = 0;
 
 	if (strcmp(word, "$MODE$") == 0) {
-		rc = snprintf(conv, MAXSTR, "%d", ctx->operating_mode);
+		if (ctx->operating_mode == TALKER_MODE)
+			rc = snprintf(conv, MAXSTR, "talker");
+		else
+			rc = snprintf(conv, MAXSTR, "listener");
 	} else if (strcmp(word, "$GPTP$") == 0) {
-		rc = snprintf(conv, MAXSTR, "%d", ctx->use_gptp);
+		if (ctx->use_gptp == true)
+			rc = snprintf(conv, MAXSTR, "enable");
+		else
+			rc = snprintf(conv, MAXSTR, "disable");
 	} else if (strcmp(word, "$SRP$") == 0) {
-		rc = snprintf(conv, MAXSTR, "%d", ctx->use_srp);
+		if (ctx->use_srp == true)
+			rc = snprintf(conv, MAXSTR, "enable");
+		else
+			rc = snprintf(conv, MAXSTR, "disable");
 	} else if (strcmp(word, "$DEST_ADDR$") == 0) {
 		rc = snprintf(conv, MAXSTR, "%02x:%02x:%02x:%02x:%02x:%02x",
 			ctx->dest_addr[0], ctx->dest_addr[1],
