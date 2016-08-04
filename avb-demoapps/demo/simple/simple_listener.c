@@ -24,7 +24,7 @@
 #include "eavb.h"
 
 #define PROGNAME "simple_listener"
-#define PROGVERSION "0.11"
+#define PROGVERSION "0.12"
 
 #define ARRAY_SIZE(a)		(sizeof(a) / sizeof(a[0]))
 
