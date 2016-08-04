@@ -50,7 +50,7 @@
 
 #include "msrp.h"
 
-#define LIBVERSION "0.3"
+#define LIBVERSION "0.4"
 
 /*
  * internal functions
