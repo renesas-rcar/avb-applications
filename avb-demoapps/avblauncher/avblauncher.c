@@ -32,7 +32,7 @@
 #include "netif_util.h"
 
 #define PROGNAME "avblauncher"
-#define PROGVERSION "0.1"
+#define PROGVERSION "0.2"
 
 /* Max Min */
 #define VLAN_ID_MIN          1
