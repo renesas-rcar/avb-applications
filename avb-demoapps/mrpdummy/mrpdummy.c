@@ -178,7 +178,7 @@ static void usage(void)
 		"    -v                     set verbose\n"
 		"    -h                     show this message\n"
 		"\n" PROG_STR " v" VERSION_STR
-		", Copyright (c) 2013-2016, Renesas Electronics Corporation\n"
+		", Copyright (c) 2016, Renesas Electronics Corporation\n"
 		"\n");
 }
 
