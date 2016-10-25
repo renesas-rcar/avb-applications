@@ -1,7 +1,8 @@
 CC ?= $(CROSS_COMPILE)gcc
 RM = rm -f
 
-INC =
+INCSHARED ?= $(KERNEL_SRC)/drivers/staging/avb-streaming
+INC = -I$(INCSHARED)
 CFLAGS = -c -Wall -ggdb -O2 $(INC) $(EXTRA_CFLAGS)
 LDLIBS  = -lm -lrt $(EXTRA_LDFLAGS)
 
