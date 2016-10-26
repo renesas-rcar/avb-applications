@@ -1,4 +1,5 @@
 # CROSS_COMPILE :=
+INCSHARED ?= $(KERNEL_SRC)/drivers/staging/avb-streaming
 
 ##############################################################
 
@@ -15,6 +16,7 @@ CFLAGS += -c
 CFLAGS += -g
 CFLAGS += -O2
 CFLAGS += -std=gnu99
+CFLAGS += -I$(INCSHARED)
 
 #############################################################
 

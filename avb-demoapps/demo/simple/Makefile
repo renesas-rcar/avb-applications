@@ -1,6 +1,7 @@
 # TOP_DIR :=
 # CROSS_COMPILE :=
 # INSTALL_DIR :=
+INCSHARED ?= $(KERNEL_SRC)/drivers/staging/avb-streaming
 
 ##############################################################
 
@@ -28,6 +29,7 @@ CFLAGS += -I$(DEMO_COMMON_DIR)
 CFLAGS += -I$(TOP_DIR)/lib/eavb
 CFLAGS += -I$(TOP_DIR)/lib/msrp
 CFLAGS += -I$(TOP_DIR)/lib/avtp
+CFLAGS += -I$(INCSHARED)
 CFLAGS += $(EXTRA_CFLAGS)
 
 LFLAGS := -pthread

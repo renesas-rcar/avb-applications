@@ -1,5 +1,6 @@
 TOP_DIR ?=$(shell pwd)
 
+INCSHARED          ?=$(KERNEL_SRC)/drivers/avb-streaming
 CROSS_COMPILE      ?=aarch64-poky-linux-
 INSTALL_DIR        ?=$(shell pwd)/demo/sample
 
