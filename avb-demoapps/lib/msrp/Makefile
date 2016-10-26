@@ -15,7 +15,6 @@ CFLAGS += -c
 CFLAGS += -g
 CFLAGS += -O2
 CFLAGS += -std=gnu99
-CFLAGS += --sysroot=$(SYSROOT)
 
 #############################################################
 

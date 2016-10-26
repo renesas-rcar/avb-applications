@@ -1,6 +1,5 @@
 # TOP_DIR :=
 # CROSS_COMPILE :=
-# SYSROOT :=
 # INSTALL_DIR :=
 
 ##############################################################
@@ -25,15 +24,10 @@ CFLAGS += -std=gnu99
 CFLAGS += -I.
 CFLAGS += -I$(TOP_DIR)/lib/avtp
 CFLAGS += -I$(DEMO_COMMON_DIR)
-CFLAGS += -I$(SYSROOT)/usr/include/
 CFLAGS += -Iinih/
-CFLAGS += --sysroot=$(SYSROOT)
 CFLAGS += $(EXTRA_CFLAGS)
 
 LFLAGS := -pthread
-LFLAGS += --sysroot=$(SYSROOT)
-#LFLAGS += -L$(SYSROOT)/usr/lib
-LFLAGS += -L$(SYSROOT)/usr/lib64
 LFLAGS += $(addprefix -l,$(LIBS))
 
 #############################################################

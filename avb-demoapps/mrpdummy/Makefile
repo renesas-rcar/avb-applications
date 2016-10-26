@@ -11,11 +11,9 @@ CFLAGS += -g
 CFLAGS += -O2
 CFLAGS += -std=gnu99
 CFLAGS += -I$(TOP_DIR)/lib/msrp
-CFLAGS += --sysroot=$(SYSROOT)
 CFLAGS += $(EXTRA_CFLAGS)
 
 LFLAGS := -pthread
-LFLAGS += --sysroot=$(SYSROOT)
 LFLAGS += -L$(TOP_DIR)/lib/msrp
 LFLAGS += $(addprefix -l,$(LIBS))
 

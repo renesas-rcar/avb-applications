@@ -1,6 +1,5 @@
 # TOP_DIR :=
 # CROSS_COMPILE :=
-# SYSROOT :=
 # INSTALL_DIR :=
 
 ##############################################################
@@ -29,11 +28,9 @@ CFLAGS += -I$(DEMO_COMMON_DIR)
 CFLAGS += -I$(TOP_DIR)/lib/eavb
 CFLAGS += -I$(TOP_DIR)/lib/msrp
 CFLAGS += -I$(TOP_DIR)/lib/avtp
-CFLAGS += --sysroot=$(SYSROOT)
 CFLAGS += $(EXTRA_CFLAGS)
 
 LFLAGS := -pthread
-LFLAGS += --sysroot=$(SYSROOT)
 LFLAGS += -L$(TOP_DIR)/lib/eavb
 LFLAGS += -L$(TOP_DIR)/lib/msrp
 LFLAGS += -L$(TOP_DIR)/lib/avtp
