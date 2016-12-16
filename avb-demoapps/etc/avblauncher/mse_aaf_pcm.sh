@@ -6,6 +6,7 @@
 TYPE=$1
 PRIORITY=$2
 PACKETIER=aaf_pcm
+MSE_SYSFS=/sys/class/ravb_mse
 
 if [ "x$TYPE" = "xtalker" ]; then
   TALKER_MAC_ADDR=`cat /sys/class/net/eth0/address | tr -d ":"`
@@ -13,17 +14,18 @@ if [ "x$TYPE" = "xtalker" ]; then
   DEST_ADDR=`echo $4 | tr -d ":"`
   MSE=mse0
 
-  echo ${DEST_ADDR} > /sys/module/mse_core/${MSE}/dst_mac
+  echo ${DEST_ADDR} > ${MSE_SYSFS}/${MSE}/avtp_tx_param/dst_mac
+  echo ${TALKER_MAC_ADDR} > ${MSE_SYSFS}/${MSE}/avtp_tx_param/src_mac
+  echo ${PRIORITY}  > ${MSE_SYSFS}/${MSE}/avtp_tx_param/priority
+  echo ${UNIQUE_ID} > ${MSE_SYSFS}/${MSE}/avtp_tx_param/uniqueid
+  echo ${PACKETIER} > ${MSE_SYSFS}/${MSE}/packetizer/name
 else
-  TALKER_MAC_ADDR=`echo $3 | tr -d ":" | cut -c 1-12`
-  UNIQUE_ID=`echo $3 | tr -d ":" | cut -c 13-16`
+  STREAMID=`echo $3 | tr -d ":"`
   MSE=mse1
-fi
 
-echo ${TALKER_MAC_ADDR} > /sys/module/mse_core/${MSE}/src_mac
-echo ${PRIORITY} > /sys/module/mse_core/${MSE}/priority
-echo ${UNIQUE_ID} > /sys/module/mse_core/${MSE}/unique_id
-echo ${PACKETIER} > /sys/module/mse_core/${MSE}/packetizer_name
+  echo ${STREAMID} > ${MSE_SYSFS}/${MSE}/avtp_rx_param/streamid
+  echo ${PACKETIER} > ${MSE_SYSFS}/${MSE}/packetizer/name
+fi
 
 #
 # mse alsa parameter
@@ -33,7 +35,7 @@ ALSA_CHANNELS=2
 ALSA_FORMAT=S16_LE
 ALSA_TEST=sine
 ALSA_DEVICE=hw:0,0
-ALSA_MSE_DEVICE=`cat /sys/module/mse_core/${MSE}/device`
+ALSA_MSE_DEVICE=`cat ${MSE_SYSFS}/${MSE}/info/device`
 
 if [ "x$TYPE" = "xtalker" ]; then
   speaker-test \
