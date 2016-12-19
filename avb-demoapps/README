@@ -9,6 +9,7 @@ The software include in following component
 - mrpdummy: Simple mrpd client.
 - avblauncher: Launcher application for Protocol daemons and streaming application.
   - inih: Ben Hoyt's INI parser library.
+    (https://github.com/benhoyt/inih)
 
 These softwares are released under the MIT or BSD Licenses,
 see following files.
