@@ -30,6 +30,7 @@
 #include "avblauncher.h"
 #include "avtp.h"
 #include "netif_util.h"
+#include "avdecc.h"
 
 #define PROGNAME "avblauncher"
 #define PROGVERSION "0.2"
@@ -1254,11 +1255,42 @@ static int start_application(struct app_context *ctx)
 	return exe_command(ctx->app_cmd, NULL, NULL);
 }
 
+static int start_avdecc_process(struct app_context *ctx)
+{
+	int role = ROLE_TALKER;
+
+	if (ctx->operating_mode == TALKER_MODE)
+		role = ROLE_TALKER;
+	else
+		role = ROLE_LISTENER;
+
+	avdecc_init(NULL, NULL, role);
+
+	return 0;
+}
+
+static int stop_avdecc_process(struct app_context *ctx)
+{
+	int rc = 0;
+
+	rc = avdecc_terminate(NULL);
+	if (rc < 0) {
+		fprintf(stderr, "failed to terminate avdecc process\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 static void streaming_thread(void *arg)
 {
 	int rc;
 	bool reserved_stream = false;
 	struct app_context *ctx = (struct app_context *)arg;
+
+	rc = start_avdecc_process(ctx);
+	if (rc < 0)
+		goto end;
 
 	if (ctx->use_gptp) {
 		rc = wait_ascapable(ctx);
@@ -1305,6 +1337,12 @@ static void streaming_thread(void *arg)
 		if (rc < 0)
 			fprintf(stderr, "failed to stop mrpdummy\n");
 	}
+
+	rc = stop_avdecc_process(ctx);
+	if (rc < 0)
+		goto end;
+	fprintf(stderr, "success to terminate avdecc process\n");
+
 end:
 	pthread_exit(NULL);
 }
