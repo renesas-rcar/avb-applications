@@ -30,6 +30,7 @@
 #include "avblauncher.h"
 #include "avtp.h"
 #include "netif_util.h"
+#include "avdecc.h"
 
 #define PROGNAME "avblauncher"
 #define PROGVERSION "0.2"
@@ -66,6 +67,7 @@ enum states {
 static int ini2ctx_mode(struct app_context *ctx, const char *value);
 static int ini2ctx_gptp(struct app_context *ctx, const char *value);
 static int ini2ctx_srp(struct app_context *ctx, const char *value);
+static int ini2ctx_avdecc(struct app_context *ctx, const char *value);
 static int ini2ctx_destaddr(struct app_context *ctx, const char *value);
 static int ini2ctx_streamid(struct app_context *ctx, const char *value);
 static int ini2ctx_application(struct app_context *ctx, const char *value);
@@ -87,6 +89,7 @@ static struct parser_data parser_table[] = {
 	{ IDX_OPERATING_MODE, INI_MODE           , ini2ctx_mode          },
 	{ IDX_USE_GPTP      , INI_GPTP           , ini2ctx_gptp          },
 	{ IDX_USE_SRP       , INI_SRP            , ini2ctx_srp           },
+	{ IDX_USE_AVDECC    , INI_AVDECC         , ini2ctx_avdecc        },
 	{ IDX_SR_CLASS      , INI_SR_CLASS       , ini2ctx_srclass       },
 	{ IDX_SR_PRIORITY   , INI_SR_PRIORITY    , ini2ctx_srpriority    },
 	{ IDX_VID           , INI_VLAN_ID        , ini2ctx_vid           },
@@ -181,6 +184,18 @@ static int ini2ctx_gptp(struct app_context *ctx, const char *value)
 static int ini2ctx_srp(struct app_context *ctx, const char *value)
 {
 	return assigned_bool_data("enable", "disable", value, &ctx->use_srp);
+}
+
+static int ini2ctx_avdecc(struct app_context *ctx, const char *value)
+{
+	if (strcasecmp("disable", value) == 0) {
+		ctx->use_avdecc = false;
+		return INI_SUCCESS;
+	}
+
+	ctx->use_avdecc = true;
+	strcpy(ctx->avdecc_entity, value);
+	return INI_SUCCESS;
 }
 
 static int ini2ctx_destaddr(struct app_context *ctx, const char *value)
@@ -308,6 +323,11 @@ static int convert_word(struct app_context *ctx, char *word, char *conv)
 	} else if (strcmp(word, "$SRP$") == 0) {
 		if (ctx->use_srp == true)
 			rc = snprintf(conv, MAXSTR, "enable");
+		else
+			rc = snprintf(conv, MAXSTR, "disable");
+	} else if (strcmp(word, "$AVDECC$") == 0) {
+		if (ctx->use_avdecc == true)
+			rc = snprintf(conv, MAXSTR, "%s", ctx->avdecc_entity);
 		else
 			rc = snprintf(conv, MAXSTR, "disable");
 	} else if (strcmp(word, "$DEST_ADDR$") == 0) {
@@ -504,6 +524,7 @@ static void print_context(struct app_context *ctx)
 	PRINTF2("use_gptp       : %d\n", ctx->use_gptp);
 	PRINTF2("use_srp        : %d\n", ctx->use_srp);
 	PRINTF2("use_maap       : %d\n", ctx->use_maap);
+	PRINTF2("use_avdecc     : %d\n", ctx->use_avdecc);
 	PRINTF2("srclass        : %" PRIu64 "\n", ctx->srclass);
 	PRINTF2("srpriority     : %" PRIu64 "\n", ctx->srpriority);
 	PRINTF2("vid            : %" PRIu64 "\n", ctx->vid);
@@ -527,6 +548,7 @@ static void print_context(struct app_context *ctx)
 	PRINTF2("mrpdummy_pid   : %d\n", ctx->mrpdummy_pid);
 	PRINTF2("app_pid        : %d\n", ctx->app_pid);
 	PRINTF2("app_cmd        : %s\n", ctx->app_cmd);
+	PRINTF2("avdecc_entity  : %s\n", ctx->avdecc_entity);
 	PRINTF2("err_flag       : %d\n", ctx->err_flag);
 	PRINTF2("*********************************\n");
 }
@@ -548,6 +570,11 @@ static int context_error_check(struct app_context *ctx)
 
 	if (ctx->required[IDX_USE_SRP] == false) {
 		fprintf(stderr, "SRP is not set\n");
+		err_flag = 1;
+	}
+
+	if (ctx->required[IDX_USE_AVDECC] == false) {
+		fprintf(stderr, "AVDECC is not set\n");
 		err_flag = 1;
 	}
 
@@ -1254,11 +1281,139 @@ static int start_application(struct app_context *ctx)
 	return exe_command(ctx->app_cmd, NULL, NULL);
 }
 
+static int start_avdecc_process(struct app_context *ctx)
+{
+	int role = ROLE_TALKER;
+
+	if (ctx->operating_mode == TALKER_MODE)
+		role = ROLE_TALKER;
+	else
+		role = ROLE_LISTENER;
+
+	ctx->avdecc = avdecc_init(ctx->avdecc_entity, ctx->eth_interface, role);
+	if (!ctx->avdecc) {
+		fprintf(stderr, "failed to create context data of AVDECC\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int wait_avdecc_connection(struct app_context *ctx, uint16_t current_configuration, uint16_t unique_id)
+{
+	int rc = 0;
+	
+	while(1) {
+		if (ctx->operating_mode == TALKER_MODE) {
+			rc = avdecc_get_connection_count(ctx->avdecc, current_configuration, unique_id);
+		} else {
+			rc = avdecc_get_connected_from_listener_stream_info(ctx->avdecc, current_configuration, unique_id);
+		}
+		if (rc > 0) {
+			return 0;
+		} else if (rc < 0) {
+			fprintf(stderr, "failed to get connection status\n");
+			return -1;
+		}
+
+		if (sigint) {
+			fprintf(stderr, "failed to connect avdecc stream\n");
+			return -1;
+		}
+
+		usleep(SLEEP_TIME);
+	}
+
+	return -1;
+}
+
+static int start_avdecc_connection_management(struct app_context *ctx)
+{
+	int i = 0;
+	int rc = 0;
+	uint8_t streamid[AVTP_STREAMID_SIZE];
+	uint64_t tmp_stream_id = 0;
+	uint64_t tmp_dest_addr = 0;
+	uint16_t current_configuration = 0;
+	uint16_t unique_id = 0;
+	current_configuration = avdecc_get_current_configuration(ctx->avdecc);
+
+	if (ctx->operating_mode == TALKER_MODE) {
+		memcpy(streamid, ctx->src_addr, ETH_ALEN);
+		streamid[6] = (ctx->uid & 0xff00) >> 8;
+		streamid[7] = (ctx->uid & 0x00ff);
+
+		for (i = 0; i < AVTP_STREAMID_SIZE; i++)
+			tmp_stream_id = (tmp_stream_id << 8) + streamid[i];
+
+		if (ctx->operating_mode == TALKER_MODE) {
+			for (i = 0; i < ETH_ALEN; i++)
+				tmp_dest_addr = (tmp_dest_addr << 8) + ctx->dest_addr[i];
+		}
+
+		rc = avdecc_set_talker_stream_info(ctx->avdecc, current_configuration, unique_id, tmp_stream_id, tmp_dest_addr, 2);
+		if (rc < 0) {
+			fprintf(stderr, "failed to set talker stream info\n");
+			return -1;
+		}
+	}
+
+	rc = avdecc_acmp_process_start(ctx->avdecc);
+
+	if (rc < 0) {
+		fprintf(stderr, "failed to start acmp process\n");
+		return -1;
+	}
+
+	fprintf(stderr, "waiting connection of avdecc entity\n");
+	fprintf(stderr, "please send acmp command from controller\n");
+
+	rc = wait_avdecc_connection(ctx, current_configuration, unique_id);
+	if (rc < 0) {
+		fprintf(stderr, "failed to connect other avdecc entity\n");
+		return -1;
+	}
+
+	if (ctx->operating_mode == LISTENER_MODE) {
+		rc = avdecc_get_stream_id_from_listener_stream_info(ctx->avdecc, current_configuration, unique_id, ctx->streamid);
+		if (rc < 0) {
+			fprintf(stderr, "failed to get stream_id\n");
+			return -1;
+		}
+		PRINTF2("avdecc get talker streamid : %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n",
+			ctx->streamid[0], ctx->streamid[1],
+			ctx->streamid[2], ctx->streamid[3],
+			ctx->streamid[4], ctx->streamid[5],
+			ctx->streamid[6], ctx->streamid[7]);
+	}
+
+	return 0;
+}
+
+static int stop_avdecc_process(struct app_context *ctx)
+{
+	int rc = 0;
+
+	rc = avdecc_terminate(ctx->avdecc);
+	if (rc < 0) {
+		fprintf(stderr, "failed to terminate avdecc process\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 static void streaming_thread(void *arg)
 {
 	int rc;
 	bool reserved_stream = false;
 	struct app_context *ctx = (struct app_context *)arg;
+
+	if (ctx->use_avdecc) {
+		rc = start_avdecc_process(ctx);
+		if (rc < 0)
+			goto end;
+	}
 
 	if (ctx->use_gptp) {
 		rc = wait_ascapable(ctx);
@@ -1272,7 +1427,16 @@ static void streaming_thread(void *arg)
 			if (rc < 0)
 				goto end;
 		}
-	} else {
+	}
+
+	if (ctx->use_avdecc) {
+		rc = start_avdecc_connection_management(ctx);
+		if (rc < 0)
+			goto avdecc_end;
+		fprintf(stderr, "success to connect avdecc stream\n");
+	}
+
+	if (ctx->operating_mode != TALKER_MODE) {
 		ctx->app_pid = start_application(ctx);
 		if (ctx->app_pid < 0) {
 			fprintf(stderr, "failed to execute application\n");
@@ -1305,6 +1469,14 @@ static void streaming_thread(void *arg)
 		if (rc < 0)
 			fprintf(stderr, "failed to stop mrpdummy\n");
 	}
+avdecc_end:
+	if (ctx->use_avdecc) {
+		rc = stop_avdecc_process(ctx);
+		if (rc < 0)
+			goto end;
+		fprintf(stderr, "success to terminate avdecc process\n");
+	}
+
 end:
 	pthread_exit(NULL);
 }
@@ -1497,6 +1669,7 @@ int main(int argc, char *argv[])
 
 	/* updating and error checking of a context */
 	for (i = 0; i < ctx_num; i++) {
+		strcpy(ctx[i].eth_interface, iname);
 		rc = check_and_update_ctx_data(
 				&ctx[i],
 				srp_daemon_started,

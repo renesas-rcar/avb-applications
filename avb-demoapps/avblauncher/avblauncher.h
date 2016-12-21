@@ -45,6 +45,7 @@
 #define INI_MODE            "MODE"
 #define INI_GPTP            "GPTP"
 #define INI_SRP             "SRP"
+#define INI_AVDECC          "AVDECC"
 #define INI_DEST_ADDR       "DEST_ADDR"
 #define INI_STREAM_ID       "STREAM_ID"
 #define INI_APPLICATION     "APPLICATION"
@@ -78,6 +79,7 @@ enum INDEX_CONTEXT_MEMBER {
 	IDX_OPERATING_MODE,
 	IDX_USE_GPTP,
 	IDX_USE_SRP,
+	IDX_USE_AVDECC,
 	IDX_SR_CLASS,
 	IDX_SR_PRIORITY,
 	IDX_VID,
@@ -96,6 +98,7 @@ struct app_context {
 	bool           use_gptp;
 	bool           use_srp;
 	bool           use_maap;
+	bool           use_avdecc;
 	uint64_t       srclass;
 	uint64_t       srpriority;
 	uint64_t       vid;
@@ -115,6 +118,9 @@ struct app_context {
 	char           *maap_shm_addr;
 	bool           required[IDX_MAX_NUM];
 	char           *ini_name;
+	char           avdecc_entity[MAXSTR];
+	void           *avdecc;
+	char           eth_interface[MAXSTR];
 };
 
 struct domain_info {
