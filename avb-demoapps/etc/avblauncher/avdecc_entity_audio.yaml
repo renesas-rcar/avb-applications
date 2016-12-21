@@ -1,0 +1,185 @@
+entity:
+  - entity_id: 76:90:50:FF:FF:00:00:01
+    entity_model_id: 76:90:50:11:22:33:44:55
+    entity_capabilities: 0x450b
+    talker_capabilities: 0x4801
+    listener_capabilities: 0x4001
+    controller_capabilities: 0x00000000
+    available_index: 0
+    association_id: 00:00:00:00:00:00:00:00
+    entity_name: R-Car 1in/1out
+    vendor_name_string: 0
+    model_name_string: 1
+    firmware_version: v2.6.0
+    group_name: R-Car AVB
+    serial_number: 12345678
+    current_configuration: 0
+    configurations:
+      - object_name: Configuration 0
+        localized_description: 0xFFFF
+        descriptors:
+          audio_unit:
+            - object_name: Audio Unit 0
+              localized_description: 0xFFFF
+              clock_domain_index: 0
+              number_of_stream_input_ports: 1
+              base_stream_input_port: 0
+              number_of_stream_output_ports: 1
+              base_stream_output_port: 0
+              number_of_external_input_ports: 0
+              base_external_input_port: 0
+              number_of_external_output_ports: 0
+              base_external_output_port: 0
+              number_of_internal_input_ports: 0
+              base_internal_input_port: 0
+              number_of_internal_output_ports: 0
+              base_internal_output_port: 0
+              number_of_controls: 0
+              base_control: 0
+              number_of_signal_selectors: 0
+              base_signal_selector: 0
+              number_of_mixers: 0
+              base_mixer: 0
+              number_of_matrices: 0
+              base_matrix: 0
+              number_of_splitters: 0
+              base_splitter: 0
+              number_of_combiners: 0
+              base_combiner: 0
+              number_of_demultiplexers: 0
+              base_demultiplexer: 0
+              number_of_multiplexers: 0
+              base_multiplexer: 0
+              number_of_transcoders: 0
+              base_transcoder: 0
+              number_of_control_blocks: 0
+              base_control_block: 0
+              current_sampling_rate: 0xbb80
+              sampling_rates_count: 1
+              sampling_rates: 0000bb80
+#               (4byte data * sampling_rates_count)
+          stream_input:
+            - object_name: Input 0
+              localized_description: 0xFFFF
+              clock_domain_index: 0
+              stream_flags: 0x0002
+              current_format: 00:a0:02:02:40:00:02:00
+              number_of_formats: 1
+              backup_talker_entity_id_0: 0
+              backup_talker_unique_id_0: 0
+              backup_talker_entity_id_1: 0
+              backup_talker_unique_id_1: 0
+              backup_talker_entity_id_2: 0
+              backup_talker_unique_id_2: 0
+              backedup_talker_entity_id: 0
+              backedup_talker_unique_id: 0
+              avb_interface_index: 0
+              buffer_length: 0
+              formats: 00a0020240000200
+#               (8byte data * number_of_formats)
+          stream_output:
+            - object_name: Output 0
+              localized_description: 0xFFFF
+              clock_domain_index: 0
+              stream_flags: 0x2
+              current_format: 00:a0:02:02:40:00:02:00
+              number_of_formats: 1
+              backup_talker_entity_id_0: 0
+              backup_talker_unique_id_0: 0
+              backup_talker_entity_id_1: 0
+              backup_talker_unique_id_1: 0
+              backup_talker_entity_id_2: 0
+              backup_talker_unique_id_2: 0
+              backedup_talker_entity_id: 0
+              backedup_talker_unique_id: 0
+              avb_interface_index: 0
+              buffer_length: 0
+              formats: 00a0020240000200
+#               (8byte data * number_of_formats)
+          jack_input:
+            - object_name: JACK_INPUT_0001
+              localized_description: 0xFFFF
+              jack_flags: 0x0
+              jack_type: 0x007
+              number_of_controls: 0
+              base_control: 0
+          jack_output:
+            - object_name: JACK_OUTPUT_0001
+              localized_description: 0xFFFF
+              jack_flags: 0x0
+              jack_type: 0x007
+              number_of_controls: 0
+              base_control: 0
+          avb_interface:
+            - object_name: AVB_INTERFACE_0001
+              localized_description: 0xFFFF
+              interface_flags: 0x7
+              clock_identity: 2E:09:0A:FF:FF:00:83:AA
+              priority1: 0
+              clock_class: 0xFF
+              offset_scaled_log_variance: 0x0000
+              clock_accuracy: 0xFF
+              priority2: 0
+              domain_number: 0
+              log_sync_interval: 0
+              log_announce_interval: 0
+              log_pdelay_interval: 0
+              port_number: 0x0000
+          clock_source:
+            - object_name: Input Stream
+              localized_description: 0xFFFF
+              clock_source_flags: 0x0002
+              clock_source_type: 0x0002
+              clock_source_identifier: 2E:09:0A:00:83:AA:00:01
+              clock_source_location_type: 0x0005
+              clock_source_location_index: 0
+          locale:
+            - locale_identifier: en
+              base_strings: 0
+          strings:
+            - string_0: R-Car
+              string_1: R-Car-AVDECC
+              string_2: 0
+              string_3: 0
+              string_4: 0
+              string_5: 0
+              string_6: 0
+          stream_port_input:
+            - clock_domain_index: 0
+              port_flags: 0
+              number_of_controls: 0
+              base_control: 0
+              number_of_clusters: 1
+              base_cluster: 0
+              number_of_maps: 1
+              base_map: 0
+          stream_port_output:
+            - clock_domain_index: 0
+              port_flags: 0
+              number_of_controls: 0
+              base_control: 0
+              number_of_clusters: 1
+              base_cluster: 0
+              number_of_maps: 1
+              base_map: 0
+          audio_cluster:
+            - object_name: AUDIO_CLUSTER_0001
+              localized_description: 0xFFFF
+              signal_type: 0xFFFF
+              signal_index: 0
+              signal_output: 0
+              path_latency: 0
+              block_latency: 0
+              channel_count: 1
+              format: 0x40
+          audio_map:
+            - number_of_mappings: 1
+              mappings: 0001000200030004
+#               (8byte data * N)
+          clock_domain:
+            - object_name: Clock Domain
+              localized_description: 0xFFFF
+              clock_source_index: 0
+              clock_sources_count: 1
+              clock_sources: 0000
+#               (2byte data * clock_sources_count)
