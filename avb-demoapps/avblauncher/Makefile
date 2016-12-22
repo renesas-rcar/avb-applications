@@ -15,6 +15,9 @@ DEMO_COMMON_DIR := $(TOP_DIR)/demo/common
 
 LIBS := m
 LIBS += rt
+LIBS += yaml
+LIBS += avdecc
+LIBS += jdksavdecc-c
 
 CFLAGS := -Wall
 CFLAGS += -c
@@ -23,11 +26,15 @@ CFLAGS += -O2
 CFLAGS += -std=gnu99
 CFLAGS += -I.
 CFLAGS += -I$(TOP_DIR)/lib/avtp
+CFLAGS += -I$(TOP_DIR)/lib/avdecc
+CFLAGS += -I$(TOP_DIR)/lib/avdecc/jdksavdecc-c/include
 CFLAGS += -I$(DEMO_COMMON_DIR)
 CFLAGS += -Iinih/
 CFLAGS += $(EXTRA_CFLAGS)
 
 LFLAGS := -pthread
+LFLAGS += -L$(TOP_DIR)/lib/avdecc
+LFLAGS += -L$(TOP_DIR)/lib/avdecc/jdksavdecc-c
 LFLAGS += $(addprefix -l,$(LIBS))
 
 #############################################################

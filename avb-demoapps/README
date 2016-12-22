@@ -4,15 +4,20 @@ The software include in following component
 
 - demo: Simple demo streaming application.
   - lib/avtp: AVTP (IEEE 1722) packetize helper library.
+  - lib/avdecc: AVDECC (IEEE 1722.1) helper library.
+    - jdksavdecc-c: J.D. Koftinoff's IEEE 1722.1 implementation in C library.
+      (https://github.com/jdkoftinoff/jdksavdecc-c)
   - lib/msrp: SRP (IEEE 802.1Qat) with mrpd (in Open-AVB) helper library.
   - lib/eavb: Renesas AVB Streaming driver interface helper library.
 - mrpdummy: Simple mrpd client.
 - avblauncher: Launcher application for Protocol daemons and streaming application.
   - inih: Ben Hoyt's INI parser library.
+    (https://github.com/benhoyt/inih)
 
 These softwares are released under the MIT or BSD Licenses,
 see following files.
 
 * libmsrp: BSD, see lib/msrp/LICENSE.BSD
 * inih: BSD, see avblauncher/inih/LICENSE.txt
+* jdksavdecc-c: BSD, see lib/jdksavdecc-c/COPYRIGHT
 * other: MIT, see COPYING.MIT
