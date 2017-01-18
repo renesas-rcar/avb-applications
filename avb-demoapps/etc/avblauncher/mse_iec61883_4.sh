@@ -27,8 +27,6 @@ else
   echo ${PACKETIER} > ${MSE_SYSFS}/${MSE}/packetizer/name
 fi
 
-export XDG_RUNTIME_DIR=/run/user/root
-
 #
 # mse v4l2/alsa parameter (MPEG2TS)
 #
