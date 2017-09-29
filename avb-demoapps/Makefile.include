@@ -6,5 +6,5 @@ install: install.subdirs
 
 %.subdirs:
 	@for subdir in $(subdirs); do \
-		$(MAKE) -C $${subdir} $(basename $@);\
+		$(MAKE) -C $${subdir} $(basename $@) || exit;\
 	done
