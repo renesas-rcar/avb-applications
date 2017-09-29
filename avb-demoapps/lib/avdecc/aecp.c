@@ -594,6 +594,9 @@ static int aecp_process_aem_command(
 		if (jdksavdecc_eui64_compare(&aemdu.aecpdu_header.header.target_entity_id, &ctx->entity_id)) {
 			DEBUG_AECP_PRINTF2("[AECP] target_entity_id is not my entity_id\n");
 #if DEBUG_AECP
+			{
+			struct jdksavdecc_printer p;
+			char buf[256];
 			jdksavdecc_printer_init(&p, buf, sizeof(buf));
 			jdksavdecc_printer_print_eui64(&p, aemdu.aecpdu_header.header.target_entity_id);
 			DEBUG_AECP_PRINTF2("[AECP] target_entity_id = %s\n", buf);
@@ -601,6 +604,7 @@ static int aecp_process_aem_command(
 			jdksavdecc_printer_init(&p, buf, sizeof(buf));
 			jdksavdecc_printer_print_eui64(&p, ctx->entity_id);
 			DEBUG_AECP_PRINTF2("[AECP] my_entity_id : %s\n", buf);
+			}
 #endif
 		} else {
 			switch (aemdu.command_type) {
