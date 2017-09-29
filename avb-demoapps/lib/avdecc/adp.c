@@ -107,7 +107,7 @@ static void adp_advertise_tx_discover(struct avdecc_ctx *ctx)
 int adp_advertise_init(struct avdecc_ctx *ctx)
 {
 	struct jdksavdecc_eui64 zero;
-
+	int link_up;
 	if (!ctx) {
 		DEBUG_ADP_PRINTF1(
 			"[ADP] ctx is NULL in adp_advertise_init()\n");
@@ -129,13 +129,13 @@ int adp_advertise_init(struct avdecc_ctx *ctx)
 	ctx->adp_state.rcvd_discover = 0;
 
 	ctx->adp_state.link_is_up = 0;
-	ctx->adp_state.last_link_is_up =
-		is_interface_linkup(ctx->net_info.raw_sock, ctx->net_info.ifname);
-	if (ctx->adp_state.last_link_is_up < 0) {
+	link_up = is_interface_linkup(ctx->net_info.raw_sock, ctx->net_info.ifname);
+	if (link_up < 0) {
 		DEBUG_ADP_PRINTF1(
 			"[ADP] Error : is_interface_linkup()\n");
 		return -1;
 	}
+	ctx->adp_state.last_link_is_up = link_up;
 
 	memset(&ctx->adpdu, 0, sizeof(ctx->adpdu));
 	ctx->adpdu.header.cd = true;
@@ -239,6 +239,7 @@ int adp_receive_process(struct jdksavdecc_eui64 *entity_id,
 int adp_state_process(struct avdecc_ctx *ctx)
 {
 	struct timespec t;
+	int link_up;
 	jdksavdecc_timestamp_in_microseconds current_time_in_microseconds;
 	jdksavdecc_timestamp_in_microseconds diff_time;
 	jdksavdecc_timestamp_in_microseconds valid_time_in_microseconds;
@@ -266,8 +267,13 @@ int adp_state_process(struct avdecc_ctx *ctx)
 		ctx->adp_state.do_advertise = 1;
 	}
 
-	ctx->adp_state.link_is_up =
-		is_interface_linkup(ctx->net_info.raw_sock, ctx->net_info.ifname);
+	link_up = is_interface_linkup(ctx->net_info.raw_sock, ctx->net_info.ifname);
+	if (link_up < 0) {
+		DEBUG_ADP_PRINTF1(
+			"[ADP] Error : process: is_interface_linkup()\n");
+		return -1;
+	}
+	ctx->adp_state.link_is_up = link_up;
 
 	if (ctx->adp_state.last_link_is_up !=
 		ctx->adp_state.link_is_up) {
