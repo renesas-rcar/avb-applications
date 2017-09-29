@@ -26,7 +26,7 @@ LFLAGS += $(addprefix -l,$(LIBS))
 
 TARGET = libavdecc.a libjdksavdecc-c.a
 OBJS = avdecc.o common.o avdecc_entity.o adp.o aecp.o acmp.o
-HDRS = avdecc.h common.h avdecc_entity.h adp.h aecp.h acmp.h
+HDRS = avdecc.h avdecc_internal.h
 
 #############################################################
 
