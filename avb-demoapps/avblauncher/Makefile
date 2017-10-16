@@ -37,10 +37,12 @@ LFLAGS += -L$(TOP_DIR)/lib/avdecc
 LFLAGS += -L$(TOP_DIR)/lib/avdecc/jdksavdecc-c
 LFLAGS += $(addprefix -l,$(LIBS))
 
+VPATH += $(TOP_DIR)/lib/avdecc
+VPATH += $(TOP_DIR)/lib/avdecc/jdksavdecc-c
 #############################################################
 
 TARGET := avblauncher
-OBJS   := avblauncher.o $(DEMO_COMMON_DIR)/netif_util.o inih/ini.o
+OBJS   := avblauncher.o $(DEMO_COMMON_DIR)/netif_util.o inih/ini.o libavdecc.a libjdksavdecc-c.a
 HDRS   := avblauncher.h $(DEMO_COMMON_DIR)/netif_util.h inih/ini.h
 
 ######################################]#######################
