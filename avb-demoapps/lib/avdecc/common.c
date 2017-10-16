@@ -15,7 +15,7 @@
 
 #include "avdecc_internal.h"
 
-bool is_interface_linkup(int sock, const char *interface_name)
+int is_interface_linkup(int sock, const char *interface_name)
 {
 	struct ifreq ifr;
 

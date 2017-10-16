@@ -423,7 +423,7 @@ int setup_descriptor_data(struct device_entity *dev_e, uint8_t *mac_addr);
 /*
  * Common Utility
  */
-bool is_interface_linkup(int sock, const char *interface_name);
+int is_interface_linkup(int sock, const char *interface_name);
 
 void set_socket_nonblocking(int fd);
 
