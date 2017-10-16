@@ -1213,6 +1213,9 @@ int acmp_receive_process(
 		acmp_cmd_resp.stream_vlan_id     = acmpdu.stream_vlan_id;
 
 #if DEBUG_ACMP
+		{
+		struct jdksavdecc_printer p;
+		char buf[256];
 		jdksavdecc_printer_init(&p, buf, sizeof(buf));
 		jdksavdecc_printer_print_eui64(&p, acmp_cmd_resp.talker_entity_id);
 		DEBUG_ACMP_PRINTF2("[ACMP] talker_entity_id = %s\n", buf);
@@ -1224,6 +1227,7 @@ int acmp_receive_process(
 		jdksavdecc_printer_init(&p, buf, sizeof(buf));
 		jdksavdecc_printer_print_eui64(&p, ctx->entity_id);
 		DEBUG_ACMP_PRINTF2("[ACMP] my_entity_id : %s\n", buf);
+		}
 #endif
 
 		DEBUG_ACMP_PRINTF2("[ACMP] message_type: %d:\n", acmp_cmd_resp.message_type);
