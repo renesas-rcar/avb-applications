@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016 Renesas Electronics Corporation
+ * Copyright (c) 2014-2017 Renesas Electronics Corporation
  * Released under the MIT license
  * http://opensource.org/licenses/mit-license.php
  */
@@ -24,7 +24,7 @@
 #include "eavb.h"
 
 #define PROGNAME "simple_listener"
-#define PROGVERSION "0.12"
+#define PROGVERSION "0.13"
 
 #define ARRAY_SIZE(a)		(sizeof(a) / sizeof(a[0]))
 

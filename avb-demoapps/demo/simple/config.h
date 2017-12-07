@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016 Renesas Electronics Corporation
+ * Copyright (c) 2014-2017 Renesas Electronics Corporation
  * Released under the MIT license
  * http://opensource.org/licenses/mit-license.php
  */
@@ -14,7 +14,7 @@
 
 #define DEBUG_LEVEL		(1)
 
-#define CONFIG_INIT_ENTRYNUM     (128)
+#define CONFIG_INIT_ENTRYNUM     (256)
 #define CONFIG_INIT_PAYLOAD_SIZE (100)
 
 #define MSRP_RANK (MSRP_RANK_NON_EMERGENCY)
