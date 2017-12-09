@@ -25,6 +25,7 @@ CFLAGS += -g
 CFLAGS += -O2
 CFLAGS += -std=gnu99
 CFLAGS += -I.
+CFLAGS += -Idaemon_cl
 CFLAGS += -I$(TOP_DIR)/lib/avtp
 CFLAGS += -I$(TOP_DIR)/lib/avdecc
 CFLAGS += -I$(TOP_DIR)/lib/avdecc/jdksavdecc-c/include

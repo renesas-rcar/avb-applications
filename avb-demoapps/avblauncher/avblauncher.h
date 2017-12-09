@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Renesas Electronics Corporation
+ * Copyright (c) 2016-2017 Renesas Electronics Corporation
  * Released under the MIT license
  * http://opensource.org/licenses/mit-license.php
  */
@@ -23,7 +23,7 @@
 #define MRPDUMMY_CMD     "mrpdummy"
 
 #define MAXSTR  (INI_MAX_LINE)
-#define DEAMON_CL_SHM_SIZE (sizeof(struct gptp_time_data) + sizeof(pthread_mutex_t))
+#define DAEMON_CL_SHM_SIZE (sizeof(gPtpTimeData) + sizeof(pthread_mutex_t))
 #define DAEMON_CL_SHM_NAME "/ptp"
 #define DAEMON_CL_MAX_RETRY_NUM (5)
 
@@ -60,19 +60,6 @@
 enum MODE_TYPE {
 	LISTENER_MODE,
 	TALKER_MODE
-};
-
-struct gptp_time_data {
-	int64_t     ml_phoffset;
-	int64_t     ls_phoffset;
-	long double ml_freqoffset;
-	long double ls_freqoffset;
-	uint64_t    local_time;
-	uint32_t    sync_count;
-	uint32_t    pdelay_count;
-	bool        ascapable;
-	int         port_state;
-	pid_t       process_id;
 };
 
 enum INDEX_CONTEXT_MEMBER {

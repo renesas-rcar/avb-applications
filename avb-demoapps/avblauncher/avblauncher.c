@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Renesas Electronics Corporation
+ * Copyright (c) 2016-2017 Renesas Electronics Corporation
  * Released under the MIT license
  * http://opensource.org/licenses/mit-license.php
  */
@@ -26,6 +26,7 @@
 #include <sys/shm.h>
 
 #include <inih/ini.h>
+#include "daemon_cl/ipcdef.hpp"
 
 #include "avblauncher.h"
 #include "avtp.h"
@@ -808,7 +809,7 @@ static int open_gptp_data(char *shm_name, int *daemon_cl_shm_fd,
 		return -1;
 	}
 
-	ptr = (char *)mmap(NULL, DEAMON_CL_SHM_SIZE,
+	ptr = (char *)mmap(NULL, DAEMON_CL_SHM_SIZE,
 			PROT_READ | PROT_WRITE,
 			MAP_SHARED, fd, 0);
 	if (ptr == MAP_FAILED) {
@@ -827,13 +828,13 @@ static int open_gptp_data(char *shm_name, int *daemon_cl_shm_fd,
 static void close_gptp_data(int shm_fd, char *shared_mem_adr)
 {
 	if (shared_mem_adr != NULL)
-		munmap(shared_mem_adr, DEAMON_CL_SHM_SIZE);
+		munmap(shared_mem_adr, DAEMON_CL_SHM_SIZE);
 
 	if (shm_fd != -1)
 		close(shm_fd);
 }
 
-static int get_gptp_data(char *shared_mem_adr, struct gptp_time_data *td)
+static int get_gptp_data(char *shared_mem_adr, gPtpTimeData *td)
 {
 	int rc = 0;
 
@@ -857,7 +858,7 @@ static int get_gptp_data(char *shared_mem_adr, struct gptp_time_data *td)
 static int wait_ascapable(struct app_context *ctx)
 {
 	int rc = 0;
-	struct gptp_time_data ptpdata;
+	gPtpTimeData ptpdata;
 
 	while (!sigint) {
 		rc = get_gptp_data(ctx->gptp_shm_addr, &ptpdata);
@@ -866,7 +867,7 @@ static int wait_ascapable(struct app_context *ctx)
 			return -1;
 		}
 
-		if (ptpdata.ascapable) {
+		if (ptpdata.asCapable) {
 			PRINTF1("asCapable enabled.\n");
 			return 0;
 		}
