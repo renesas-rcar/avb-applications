@@ -14,6 +14,7 @@ The software include in following component
   - inih: Ben Hoyt's INI parser library.
     (https://github.com/benhoyt/inih)
   - daemon_cl: gPTP (IEEE 802.1AS) with daemon_cl (in Open-AVB) IPC headers.
+  - maap_daemon: MAAP (IEEE 1722 Annex B) with maap_daemon (in Open-AVB) IPC headers.
 
 These softwares are released under the MIT or BSD Licenses,
 see following files.
