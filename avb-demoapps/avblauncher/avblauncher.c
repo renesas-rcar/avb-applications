@@ -881,63 +881,6 @@ static int wait_ascapable(struct app_context *ctx)
 	return -1;
 }
 
-static int open_maap_data(char **shared_mem_adr)
-{
-	int shmid;
-	char *ptr = NULL;
-
-	shmid = shmget(MAAP_DAEMON_SHM_KEY, MAAP_DAEMON_SHM_SIZE, 0);
-	if (shmid < 0) {
-		perror("shmget()");
-		return -1;
-	}
-
-	ptr = (char *)shmat(shmid, (void *)0, 0);
-	if (ptr == (char *)-1) {
-		perror("shmat()");
-		return -1;
-	}
-
-	*shared_mem_adr = ptr;
-
-	return 0;
-}
-
-static int get_maap_data(char *shared_mem_adr, uint8_t *dest_addr)
-{
-	if (!shared_mem_adr[0])
-		return -1;
-
-	memcpy(dest_addr, shared_mem_adr, MAAP_DAEMON_SHM_SIZE);
-
-	return 0;
-}
-
-static void close_maap_data(char *shared_mem_adr)
-{
-	if (!shared_mem_adr)
-		shmdt(shared_mem_adr);
-}
-
-static int wait_maap_addr(struct app_context *ctx)
-{
-	int rc = 0;
-
-	while (!sigint) {
-		rc = get_maap_data(ctx->maap_shm_addr, ctx->dest_addr);
-		if (rc == 0) {
-			PRINTF2("MAAP addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
-				ctx->dest_addr[0], ctx->dest_addr[1],
-				ctx->dest_addr[2], ctx->dest_addr[3],
-				ctx->dest_addr[4], ctx->dest_addr[5]);
-			return 0;
-		}
-		usleep(SLEEP_TIME);
-	}
-
-	return -1;
-}
-
 /*
  * maap_daemon related functions
  */
@@ -1133,6 +1076,43 @@ static int maap_open_socket(uint16_t port)
 	}
 
 	return socketfd;
+}
+
+static int maap_update_address(int maap_socket,
+			       struct app_context *ctx,
+			       int ctx_num)
+{
+	int i;
+	int maap_id;
+	int reserve_count = 0;
+	uint64_t addr;
+
+	for (i = 0; i < ctx_num; i++)
+		if (ctx[i].use_maap)
+			reserve_count++;
+
+	if (!reserve_count)
+		return 0;
+
+	maap_id = maap_daemon_cmd_reserve(maap_socket,
+					  reserve_count,
+					  &addr);
+	if (maap_id < 0)
+		return -1;
+
+	for (i = 0; i < ctx_num; i++) {
+		if (ctx[i].use_maap) {
+			ctx[i].dest_addr[0] = (addr >> 40) & 0xff;
+			ctx[i].dest_addr[1] = (addr >> 32) & 0xff;
+			ctx[i].dest_addr[2] = (addr >> 24) & 0xff;
+			ctx[i].dest_addr[3] = (addr >> 16) & 0xff;
+			ctx[i].dest_addr[4] = (addr >> 8) & 0xff;
+			ctx[i].dest_addr[5] = (addr >> 0) & 0xff;
+			addr++;
+		}
+	}
+
+	return maap_id;
 }
 
 static int pidof(char *name)
@@ -1623,14 +1603,6 @@ static void streaming_thread(void *arg)
 			goto end;
 	}
 
-	if (ctx->operating_mode == TALKER_MODE) {
-		if (ctx->use_maap) {
-			rc = wait_maap_addr(ctx);
-			if (rc < 0)
-				goto end;
-		}
-	}
-
 	if (ctx->use_avdecc) {
 		rc = start_avdecc_connection_management(ctx);
 		if (rc < 0)
@@ -1705,7 +1677,7 @@ static int check_and_update_ctx_data(
 	bool srp_daemon_started,
 	uint8_t *src_addr,
 	char *daemon_cl_shm_addr,
-	char *maap_daemon_shm_addr)
+	int maap_socket)
 {
 	int rc = 0;
 
@@ -1725,7 +1697,7 @@ static int check_and_update_ctx_data(
 
 	if (ctx->use_maap &&
 	    ctx->operating_mode == TALKER_MODE &&
-	    !maap_daemon_shm_addr) {
+	    !maap_socket) {
 		fprintf(stderr,
 			"This context(%s) require maap daemon but is not running.\n",
 			ctx->ini_name);
@@ -1741,7 +1713,6 @@ static int check_and_update_ctx_data(
 
 	memcpy(ctx->src_addr, src_addr, ETH_ALEN);
 	ctx->gptp_shm_addr = daemon_cl_shm_addr;
-	ctx->maap_shm_addr = maap_daemon_shm_addr;
 
 	if (ctx->err_flag == 1)
 		return -1;
@@ -1759,8 +1730,9 @@ int main(int argc, char *argv[])
 	int daemon_cl_retry_num = 0;
 	char *daemon_cl_shm_addr = NULL;
 	bool srp_daemon_started = false;
+	int maap_socket = 0;
+	int maap_id;
 	int maap_daemon_retry_num = 0;
-	char *maap_daemon_shm_addr = NULL;
 	char *iname = NULL;
 	struct app_context *ctx = NULL;
 	struct connect_info *c_info = NULL;
@@ -1836,20 +1808,25 @@ int main(int argc, char *argv[])
 		srp_daemon_started = true;
 
 	/* run maap_daemon */
-	snprintf(cmd_option, MAXSTR, "-i %s", iname);
+	snprintf(cmd_option, MAXSTR, "-i %s -d %s", iname, MAAP_DAEMON_LOG);
 	if (start_daemon(MAAP_DAEMON_CMD, cmd_option, opt_a) == 0) {
-		while (open_maap_data(&maap_daemon_shm_addr)) {
+		while ((maap_socket = maap_open_socket(MAAP_DAEMON_PORT)) < 0) {
 			maap_daemon_retry_num++;
-			if (maap_daemon_retry_num ==
-			    MAAP_DAEMON_MAX_RETRY_NUM) {
+			if (maap_daemon_retry_num == MAAP_DAEMON_MAX_RETRY_NUM) {
 				fprintf(stderr,
-					"could not open shared memory of maap_daemon.\n");
+					"could not open socket interface of maap_daemon.\n");
 				return -1;
 			}
 			usleep(SLEEP_TIME);
-			fprintf(stderr, "retry to open maap data\n");
+			fprintf(stderr, "retry to open socket of maap_daemon\n");
 		}
-		fprintf(stderr, "open maap data.\n");
+		fprintf(stderr, "open maap_daemon socket.\n");
+
+		/* maap_daemon initialize */
+		if (maap_daemon_cmd_init(maap_socket,
+					 MAAP_DAEMON_START_ADDR,
+					 MAAP_DAEMON_ADDR_RANGE))
+			return -1;
 	}
 
 	/* create context */
@@ -1877,11 +1854,16 @@ int main(int argc, char *argv[])
 				srp_daemon_started,
 				src_addr,
 				daemon_cl_shm_addr,
-				maap_daemon_shm_addr);
+				maap_socket);
 		if (rc < 0)
 			fprintf(stderr, "%s included the error.\n",
 				ctx[i].ini_name);
 	}
+
+	/* Acquire destination address using maap_daemon */
+	maap_id = maap_update_address(maap_socket, ctx, ctx_num);
+	if (maap_id < 0)
+		return -1;
 
 	for (i = 0; i < ctx_num; i++)
 		print_context(&ctx[i]);
@@ -1910,8 +1892,13 @@ int main(int argc, char *argv[])
 	if (daemon_cl_shm_fd != -1)
 		close_gptp_data(daemon_cl_shm_fd, daemon_cl_shm_addr);
 
-	/* close maap data */
-	close_maap_data(maap_daemon_shm_addr);
+	/* release maap data and close socket*/
+	if (maap_socket) {
+		if (maap_id)
+			maap_daemon_cmd_release(maap_socket, maap_id);
+
+		close(maap_socket);
+	}
 
 	/* leave vlan and srp domain */
 	disconnect_avb_network(c_info);

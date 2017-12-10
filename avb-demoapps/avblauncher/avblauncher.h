@@ -27,9 +27,11 @@
 #define DAEMON_CL_SHM_NAME "/ptp"
 #define DAEMON_CL_MAX_RETRY_NUM (5)
 
-#define MAAP_DAEMON_SHM_SIZE (sizeof(uint8_t) * ETH_ALEN)
-#define MAAP_DAEMON_SHM_KEY 1234
+#define MAAP_DAEMON_PORT 15364
+#define MAAP_DAEMON_LOG "/dev/null"
 #define MAAP_DAEMON_MAX_RETRY_NUM (5)
+#define MAAP_DAEMON_START_ADDR 0x91e0f0000000
+#define MAAP_DAEMON_ADDR_RANGE 0xfe00
 
 #define DEBUG_LEVEL (1)
 #define PRINTF3(frmt, args...)  do { if (DEBUG_LEVEL > 2) printf(frmt, ## args); } while (0)
@@ -102,7 +104,6 @@ struct app_context {
 	bool           err_flag;
 	pthread_t      thread;
 	char           *gptp_shm_addr;
-	char           *maap_shm_addr;
 	bool           required[IDX_MAX_NUM];
 	char           *ini_name;
 	char           avdecc_entity[MAXSTR];
