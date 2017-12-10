@@ -24,9 +24,13 @@
 #include <errno.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include <inih/ini.h>
 #include "daemon_cl/ipcdef.hpp"
+#include "maap_daemon/maap_iface.h"
 
 #include "avblauncher.h"
 #include "avtp.h"
@@ -932,6 +936,203 @@ static int wait_maap_addr(struct app_context *ctx)
 	}
 
 	return -1;
+}
+
+/*
+ * maap_daemon related functions
+ */
+static int maap_daemon_send_cmd(int socketfd,
+				Maap_Cmd_Tag kind,
+				int32_t id,
+				uint64_t start,
+				uint32_t count)
+{
+	Maap_Cmd cmd;
+
+	cmd.kind = kind;
+	cmd.id = id;
+	cmd.start = start;
+	cmd.count = count;
+
+	if (send(socketfd, (char *)&cmd, sizeof(cmd), 0) < 0) {
+		fprintf(stderr, "Could not send socket interface, %s\n",
+			strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
+static int maap_daemon_wait_notify(int socketfd,
+				   Maap_Notify_Tag kind,
+				   Maap_Notify *notify)
+{
+	int recvbytes;
+
+	recvbytes = recv(socketfd, notify, sizeof(*notify), 0);
+	if (recvbytes <= 0) {
+		fprintf(stderr, "maap_daemon response error\n");
+		return -1;
+	} else if (recvbytes != sizeof(*notify)) {
+		fprintf(stderr,
+			"Received unexpected response of size %d\n",
+			recvbytes);
+		return -1;
+	} else if (notify->kind != kind) {
+		fprintf(stderr,
+			"Received unexpected response %d\n", notify->kind);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int maap_daemon_cmd_init(int socketfd, uint64_t start, uint32_t count)
+{
+	Maap_Notify notify;
+
+	PRINTF2("maap_daemon init\n");
+
+	if (maap_daemon_send_cmd(socketfd,
+				 MAAP_CMD_INIT,
+				 0,
+				 start,
+				 count))
+		return -1;
+
+	if (maap_daemon_wait_notify(socketfd,
+				    MAAP_NOTIFY_INITIALIZED,
+				    &notify)) {
+		fprintf(stderr, "maap_daemon init fail\n");
+		return -1;
+	} else if (!(notify.result == MAAP_NOTIFY_ERROR_NONE ||
+		     notify.result == MAAP_NOTIFY_ERROR_ALREADY_INITIALIZED)) {
+		fprintf(stderr, "maap_daemon init notify error\n");
+		return -1;
+	}
+
+	PRINTF1("maap_daemon init ok start %lx range %d\n",
+		notify.start, notify.count);
+
+	return 0;
+}
+
+static int maap_daemon_cmd_reserve(int socketfd, uint32_t count, uint64_t *addr)
+{
+	Maap_Notify notify;
+
+	PRINTF2("reserve request to maap_daemon\n");
+
+	if (maap_daemon_send_cmd(socketfd,
+				 MAAP_CMD_RESERVE,
+				 0,
+				 0,
+				 count))
+		return -1;
+
+	if (maap_daemon_wait_notify(socketfd,
+				    MAAP_NOTIFY_ACQUIRING,
+				    &notify)) {
+		fprintf(stderr, "maap_daemon reserve start error\n");
+		return -1;
+	} else if (notify.result != MAAP_NOTIFY_ERROR_NONE) {
+		fprintf(stderr, "maap_daemon reserve start notify error\n");
+		return -1;
+	}
+
+	PRINTF2("maap_daemon reserve start\n");
+
+	if (maap_daemon_wait_notify(socketfd,
+				    MAAP_NOTIFY_ACQUIRED,
+				    &notify)) {
+		fprintf(stderr, "maap_daemon reserve error\n");
+		return -1;
+	} else if (notify.result != MAAP_NOTIFY_ERROR_NONE) {
+		fprintf(stderr, "maap_daemon reserve notify error\n");
+		return -1;
+	}
+
+	PRINTF1("maap_daemon reserve complete start %lx range %d\n",
+		notify.start, notify.count);
+
+	*addr = notify.start;
+
+	return notify.id;
+}
+
+static int maap_daemon_cmd_release(int socketfd, int32_t id)
+{
+	Maap_Notify notify;
+
+	PRINTF2("release request to maap_daemon\n");
+
+	if (maap_daemon_send_cmd(socketfd,
+				 MAAP_CMD_RELEASE,
+				 id,
+				 0,
+				 0))
+		return -1;
+
+	if (maap_daemon_wait_notify(socketfd,
+				    MAAP_NOTIFY_RELEASED,
+				    &notify)) {
+		fprintf(stderr, "maap_daemon address release error\n");
+		return -1;
+	} else if (notify.result != MAAP_NOTIFY_ERROR_NONE) {
+		fprintf(stderr, "maap_daemon address release notify error\n");
+		return -1;
+	}
+
+	PRINTF2("maap_daemon address release\n");
+
+	return 0;
+}
+
+static int maap_open_socket(uint16_t port)
+{
+	int socketfd;
+	struct addrinfo hints, *ai, *p;
+	int ret;
+	char listenport[1024];
+
+	ret = snprintf(listenport, sizeof(listenport), "%u", port);
+	if (ret < 0)
+		return -1;
+
+	/* Create a localhost socket. */
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = 0;
+
+	ret = getaddrinfo("localhost", listenport, &hints, &ai);
+	if (ret != 0) {
+		fprintf(stderr, "getaddrinfo error %s\n", gai_strerror(ret));
+		return -1;
+	}
+
+	for (p = ai; p; p = p->ai_next) {
+		socketfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		if (socketfd == -1)
+			continue;
+
+		ret = connect(socketfd, p->ai_addr, p->ai_addrlen);
+		if (ret == -1) {
+			close(socketfd);
+			continue;
+		} else {
+			break;
+		}
+	}
+
+	freeaddrinfo(ai);
+	if (!p) {
+		fprintf(stderr, "Could not find the socket interface, %s\n",
+			strerror(errno));
+		return -1;
+	}
+
+	return socketfd;
 }
 
 static int pidof(char *name)
