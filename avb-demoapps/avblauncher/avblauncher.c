@@ -859,6 +859,29 @@ static int get_gptp_data(char *shared_mem_adr, gPtpTimeData *td)
 	return 0;
 }
 
+static int get_gptp_grandmaster_id(struct app_context *ctx, uint64_t *grandmaster_id)
+{
+	int rc = 0;
+	gPtpTimeData ptpdata;
+
+	rc = get_gptp_data(ctx->gptp_shm_addr, &ptpdata);
+	if (rc < 0) {
+		fprintf(stderr, "could not get gptp data.\n");
+		return -1;
+	}
+
+	*grandmaster_id = ((uint64_t)ptpdata.gptp_grandmaster_id[0]) << 56 |
+			  ((uint64_t)ptpdata.gptp_grandmaster_id[1]) << 48 |
+			  ((uint64_t)ptpdata.gptp_grandmaster_id[2]) << 40 |
+			  ((uint64_t)ptpdata.gptp_grandmaster_id[3]) << 32 |
+			  ((uint64_t)ptpdata.gptp_grandmaster_id[4]) << 24 |
+			  ((uint64_t)ptpdata.gptp_grandmaster_id[5]) << 16 |
+			  ((uint64_t)ptpdata.gptp_grandmaster_id[6]) <<  8 |
+			  ((uint64_t)ptpdata.gptp_grandmaster_id[7]) <<  0;
+
+	return 0;
+}
+
 static int wait_ascapable(struct app_context *ctx)
 {
 	int rc = 0;
@@ -1484,8 +1507,19 @@ static int start_avdecc_process(struct app_context *ctx)
 static int wait_avdecc_connection(struct app_context *ctx, uint16_t current_configuration, uint16_t unique_id)
 {
 	int rc = 0;
-	
+	uint64_t grandmaster_id;
+
 	while(1) {
+		rc = get_gptp_grandmaster_id(ctx, &grandmaster_id);
+		if (rc < 0)
+			return -1;
+
+		rc = avdecc_set_grandmaster_id(ctx->avdecc, grandmaster_id);
+		if (rc < 0) {
+			fprintf(stderr, "failed to set gptp grandmaster id\n");
+			return -1;
+		}
+
 		if (ctx->operating_mode == TALKER_MODE) {
 			rc = avdecc_get_connection_count(ctx->avdecc, current_configuration, unique_id);
 		} else {
