@@ -221,7 +221,6 @@ int adp_receive_process(struct jdksavdecc_eui64 *entity_id,
 			DEBUG_ADP_PRINTF2("[ADP] Received ENTITY_AVAILABLE:\n");
 			/* for controller process */
 			adp_state->rcvd_available = 0;
-			jdksavdecc_eui64_copy(&adp_state->advertised_grandmaster_id, &adpdu.gptp_grandmaster_id);
 			break;
 		case JDKSAVDECC_ADP_MESSAGE_TYPE_ENTITY_DEPARTING:
 			DEBUG_ADP_PRINTF2("[ADP] Received ENTITY_DEPARTING:\n");
@@ -283,6 +282,15 @@ int adp_state_process(struct avdecc_ctx *ctx)
 			ctx->adp_state.do_advertise = 1;
 	}
 
+	/* If different currentGrandmasterID and advertisedGrandmasterID */
+	if (jdksavdecc_eui64_compare(&ctx->adpdu.gptp_grandmaster_id,
+				     &ctx->adp_state.advertised_grandmaster_id)) {
+		DEBUG_ADP_PRINTF2("[ADP] GM Update\n");
+		jdksavdecc_eui64_copy(&ctx->adp_state.advertised_grandmaster_id,
+				      &ctx->adpdu.gptp_grandmaster_id);
+		ctx->adp_state.do_advertise = 1;
+	}
+
 	if (ctx->adp_state.do_advertise) {
 		DEBUG_ADP_PRINTF2("[ADP] do_advertise\n");
 		ctx->adp_state.last_time_in_microseconds =
@@ -307,15 +315,6 @@ int adp_state_process(struct avdecc_ctx *ctx)
 		ctx->adpdu.available_index = 0;
 	}
 
-	/***************************************/
-	/** TODO: implement "UPDATE GM" state **/
-	/***************************************/
-
-	/* todo remove: The following procedure is workaround. */
-	/* It is different from Chapter 6.2.5.1.1 & Figure 6.3 in IEEE1722.1-2013 standard */
-	/* It is necessary to be able to acquire ClockIdentity of the grandmaster in the gPTP domain */
-	jdksavdecc_eui64_copy(&ctx->adpdu.gptp_grandmaster_id, &ctx->adp_state.advertised_grandmaster_id);
-
 	return 0;
 }
 
@@ -328,6 +327,19 @@ int adp_state_change_departing(struct adp_state_data *adp_state)
 	}
 
 	adp_state->do_terminate = 1;
+
+	return 0;
+}
+
+int adp_set_grandmaster_id(struct avdecc_ctx *ctx, uint64_t grandmaster_id)
+{
+	if (!ctx) {
+		DEBUG_ADP_PRINTF1(
+			"[ADP] ctx is NULL in adp_set_grandmaster_id()\n");
+		return -1;
+	}
+
+	jdksavdecc_eui64_init_from_uint64(&ctx->adpdu.gptp_grandmaster_id, grandmaster_id);
 
 	return 0;
 }

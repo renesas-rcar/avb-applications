@@ -257,6 +257,20 @@ int avdecc_terminate(void *arg)
 	return 0;
 }
 
+int avdecc_set_grandmaster_id(void *arg, uint64_t grandmaster_id)
+{
+	struct avdecc_ctx *ctx;
+
+	if (!arg) {
+		AVDECC_PRINTF1("[AVDECC] avdecc_set_grandmaster_id(): arg is NULL.\n");
+		return -1;
+	}
+
+	ctx = (struct avdecc_ctx *)arg;
+
+	return adp_set_grandmaster_id(ctx, grandmaster_id);
+}
+
 int avdecc_set_talker_stream_info(
 	void *arg,
 	uint16_t current_configuration,

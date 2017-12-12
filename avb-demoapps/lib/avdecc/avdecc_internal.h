@@ -358,6 +358,8 @@ int adp_state_process(struct avdecc_ctx *ctx);
 
 int adp_state_change_departing(struct adp_state_data *adp_state);
 
+int adp_set_grandmaster_id(struct avdecc_ctx *ctx, uint64_t grandmaster_id);
+
 /*
  * ACMP functions
  */

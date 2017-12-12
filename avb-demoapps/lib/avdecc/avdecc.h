@@ -19,6 +19,11 @@ extern void *avdecc_init(char *filename,
 extern int avdecc_terminate(void *arg);
 
 /*
+ * ADP set Grandmaster ID
+ */
+extern int avdecc_set_grandmaster_id(void *arg, uint64_t grandmaster_id);
+
+/*
  * AECP get current configuration
  */
 extern int avdecc_get_current_configuration(void *arg);
