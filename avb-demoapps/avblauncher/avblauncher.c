@@ -986,6 +986,8 @@ static int maap_daemon_cmd_init(int socketfd, uint64_t start, uint32_t count)
 static int maap_daemon_cmd_reserve(int socketfd, uint32_t count, uint64_t *addr)
 {
 	Maap_Notify notify;
+	int32_t maap_id;
+	int i;
 
 	PRINTF2("reserve request to maap_daemon\n");
 
@@ -1008,13 +1010,29 @@ static int maap_daemon_cmd_reserve(int socketfd, uint32_t count, uint64_t *addr)
 
 	PRINTF2("maap_daemon reserve start\n");
 
-	if (maap_daemon_wait_notify(socketfd,
-				    MAAP_NOTIFY_ACQUIRED,
-				    &notify)) {
+	maap_id = notify.id;
+
+	/* daemon will be notify acquiring while confilct detected. */
+	for (i = 0; i < MAAP_DAEMON_RESERVE_RETRY_NUM; i++) {
+		if (maap_daemon_wait_notify(socketfd,
+					    MAAP_NOTIFY_ACQUIRED,
+					    &notify)) {
+			/* kind is not expected, so break immediately */
+			if (notify.kind != MAAP_NOTIFY_ACQUIRING)
+				break;
+		} else {
+			/* success */
+			break;
+		}
+	}
+
+	if (notify.kind != MAAP_NOTIFY_ACQUIRED) {
 		fprintf(stderr, "maap_daemon reserve error\n");
+		maap_daemon_send_cmd(socketfd, MAAP_CMD_RELEASE, maap_id, 0, 0);
 		return -1;
 	} else if (notify.result != MAAP_NOTIFY_ERROR_NONE) {
 		fprintf(stderr, "maap_daemon reserve notify error\n");
+		maap_daemon_send_cmd(socketfd, MAAP_CMD_RELEASE, maap_id, 0, 0);
 		return -1;
 	}
 
