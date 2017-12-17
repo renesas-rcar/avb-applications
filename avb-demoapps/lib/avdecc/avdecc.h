@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Renesas Electronics Corporation
+ * Copyright (c) 2016-2017 Renesas Electronics Corporation
  * Released under the MIT license
  * http://opensource.org/licenses/mit-license.php
  */
