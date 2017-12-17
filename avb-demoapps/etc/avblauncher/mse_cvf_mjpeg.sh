@@ -38,13 +38,14 @@ V4L2_FRAMERATE=${V4L2_FRAMERATE_NUMERATOR}/${V4L2_FRAMERATE_DENOMINATOR}
 V4L2_MSE_DEVICE=`cat ${MSE_SYSFS}/${MSE}/info/device`
 
 if [ "x$TYPE" = "xtalker" ]; then
-  echo ${V4L2_FRAMERATE_NUMERATOR} > ${MSE_SYSFS}/${MSE}/media_video_config/fps_numerator
-  echo ${V4L2_FRAMERATE_DENOMINATOR} > ${MSE_SYSFS}/${MSE}/media_video_config/fps_denominator
-
   gst-launch-1.0 \
-    filesrc location=./movie.mjpeg ! \
-    image/jpeg,width=${V4L2_WIDTH},height=${V4L2_HEIGHT},framerate=${V4L2_FRAMERATE} ! \
-    v4l2sink sync=false device=${V4L2_MSE_DEVICE}
+    videotestsrc ! \
+    video/x-raw,width=${V4L2_WIDTH},height=${V4L2_HEIGHT},framerate=${V4L2_FRAMERATE},format=I420 ! \
+    jpegenc ! \
+    jpegparse ! \
+    videorate ! \
+    image/jpeg,width=${V4L2_WIDTH},height=${V4L2_HEIGHT},framerate=${V4L2_FRAMERATE},colorimetry=bt601 ! \
+    v4l2sink sync=true show-preroll-frame=false device=${V4L2_MSE_DEVICE}
 else
   gst-launch-1.0 \
     v4l2src device=${V4L2_MSE_DEVICE} ! \
@@ -53,5 +54,5 @@ else
     jpegdec ! \
     vspfilter ! \
     video/x-raw,format=NV12,width=${V4L2_WIDTH},height=${V4L2_HEIGHT} ! \
-    waylandsink sync=false
+    waylandsink sync=true
 fi

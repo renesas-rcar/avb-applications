@@ -44,12 +44,12 @@ if [ "x$TYPE" = "xtalker" ]; then
     omxh264enc target-bitrate=15000000 ! \
     h264parse ! \
     video/x-h264,width=${V4L2_WIDTH},height=${V4L2_HEIGHT},framerate=${V4L2_FRAMERATE},stream-format=byte-stream,alignment=au ! \
-    v4l2sink sync=true device=${V4L2_MSE_DEVICE}
+    v4l2sink sync=true show-preroll-frame=false device=${V4L2_MSE_DEVICE}
 else
   gst-launch-1.0 \
     v4l2src device=${V4L2_MSE_DEVICE} ! \
     video/x-h264,width=${V4L2_WIDTH},height=${V4L2_HEIGHT},framerate=${V4L2_FRAMERATE},stream-format=byte-stream ! \
     h264parse ! \
     omxh264dec ! \
-    waylandsink sync=false
+    waylandsink sync=true
 fi

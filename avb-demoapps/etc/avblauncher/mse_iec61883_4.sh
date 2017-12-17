@@ -33,14 +33,14 @@ fi
 ALSA_SAMPLERATE=44100
 ALSA_CHANNELS=2
 ALSA_FORMAT=S16LE
-ALSA_DEVICE=hw:0,0
+ALSA_DEVICE=plughw:0,0
 V4L2_MSE_DEVICE=`cat ${MSE_SYSFS}/${MSE}/info/device`
 
 if [ "x$TYPE" = "xtalker" ]; then
   gst-launch-1.0 \
     filesrc location=./movie.ts ! \
     video/mpegts,systemstream=true ! \
-    v4l2sink sync=false device=${V4L2_MSE_DEVICE}
+    v4l2sink sync=true show-preroll-frame=false device=${V4L2_MSE_DEVICE}
 else
   gst-launch-1.0 \
     v4l2src device=${V4L2_MSE_DEVICE} ! queue ! \
@@ -54,5 +54,5 @@ else
     demux. ! queue ! \
       h264parse ! \
       omxh264dec ! \
-      waylandsink sync=false
+      waylandsink sync=true
 fi

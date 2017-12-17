@@ -34,7 +34,7 @@ ALSA_SAMPLERATE=48000
 ALSA_CHANNELS=2
 ALSA_FORMAT=S16_LE
 ALSA_TEST=sine
-ALSA_DEVICE=hw:0,0
+ALSA_DEVICE=plughw:0,0
 ALSA_MSE_DEVICE=`cat ${MSE_SYSFS}/${MSE}/info/device`
 
 if [ "x$TYPE" = "xtalker" ]; then
