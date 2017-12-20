@@ -410,7 +410,7 @@ static int acmp_tx_response(
 static int acmp_tx_command(
 	uint8_t message_type,
 	const struct acmp_cmd_resp *acmp_cmd_resp,
-	uint8_t retry,
+	struct acmp_inflight_command *inflight,
 	struct avdecc_ctx *ctx)
 {
 	struct timespec t;
@@ -452,10 +452,9 @@ static int acmp_tx_command(
 
 	frame.dest_address = jdksavdecc_multicast_adp_acmp;
 
-	if (!retry) {
-		struct acmp_inflight_command *inflight;
+	clock_gettime(CLOCK_MONOTONIC, &t);
 
-		clock_gettime(CLOCK_MONOTONIC, &t);
+	if (!inflight) {
 		for (i = 0; i < MAX_INFLIGHT_CMD_NUM; i++) {
 			inflight = &(ctx->dev_e->acmp_listener_inflight_commands[i]);
 			if (inflight->timeout != 0) {
@@ -477,20 +476,6 @@ static int acmp_tx_command(
 
 				inflight->retried  = false;
 				inflight->original_sequence_id  = acmp_cmd_resp->sequence_id;
-
-				switch (acmpdu.header.message_type) {
-				case JDKSAVDECC_ACMP_MESSAGE_TYPE_CONNECT_TX_COMMAND:
-					ms_timeout_priod = JDKSAVDECC_ACMP_TIMEOUT_CONNECT_TX_COMMAND_MS;
-					break;
-				case JDKSAVDECC_ACMP_MESSAGE_TYPE_DISCONNECT_TX_COMMAND:
-					ms_timeout_priod = JDKSAVDECC_ACMP_TIMEOUT_DISCONNECT_TX_COMMAND_MS;
-					break;
-				default:
-					ms_timeout_priod = 0;
-					break;
-				}
-
-				inflight->timeout = (t.tv_sec * 1000000) + (t.tv_nsec / 1000) + (ms_timeout_priod * 1000);
 				break;
 			}
 		}
@@ -500,6 +485,20 @@ static int acmp_tx_command(
 			return -1;
 		}
 	}
+
+	switch (inflight->command.message_type) {
+	case JDKSAVDECC_ACMP_MESSAGE_TYPE_CONNECT_TX_COMMAND:
+		ms_timeout_priod = JDKSAVDECC_ACMP_TIMEOUT_CONNECT_TX_COMMAND_MS;
+		break;
+	case JDKSAVDECC_ACMP_MESSAGE_TYPE_DISCONNECT_TX_COMMAND:
+		ms_timeout_priod = JDKSAVDECC_ACMP_TIMEOUT_DISCONNECT_TX_COMMAND_MS;
+		break;
+	default:
+		ms_timeout_priod = 0;
+		break;
+	}
+
+	inflight->timeout = (t.tv_sec * 1000000) + (t.tv_nsec / 1000) + (ms_timeout_priod * 1000);
 
 	if (frame.length > 0) {
 		if (send_data(&ctx->net_info,
@@ -525,7 +524,7 @@ static int acmp_process_connect_rx_cmd(
 		if (!acmp_listener_is_connected(ctx, acmp_cmd_resp)) {
 			acmp_tx_command(JDKSAVDECC_ACMP_MESSAGE_TYPE_CONNECT_TX_COMMAND,
 					acmp_cmd_resp,
-					false,
+					NULL,
 					ctx);
 		} else {
 			acmp_tx_response(JDKSAVDECC_ACMP_MESSAGE_TYPE_CONNECT_RX_RESPONSE,
@@ -626,7 +625,7 @@ static int acmp_process_disconnect_rx_cmd(
 		if (acmp_listener_is_connectedto(ctx, acmp_cmd_resp)) {
 			acmp_tx_command(JDKSAVDECC_ACMP_MESSAGE_TYPE_DISCONNECT_TX_COMMAND,
 					acmp_cmd_resp,
-					false,
+					NULL,
 					ctx);
 		} else {
 			acmp_tx_response(JDKSAVDECC_ACMP_MESSAGE_TYPE_DISCONNECT_RX_RESPONSE,
@@ -689,7 +688,7 @@ static int acmp_process_connect_tx_timeout(
 		acmp_tx_response(JDKSAVDECC_ACMP_MESSAGE_TYPE_CONNECT_RX_RESPONSE, &response, JDKSAVDECC_ACMP_STATUS_LISTENER_TALKER_TIMEOUT, ctx);
 		memset(inflight, 0, sizeof(struct acmp_inflight_command));
 	} else {
-		acmp_tx_command(JDKSAVDECC_ACMP_MESSAGE_TYPE_CONNECT_TX_COMMAND, &inflight->command, true, ctx);
+		acmp_tx_command(JDKSAVDECC_ACMP_MESSAGE_TYPE_CONNECT_TX_COMMAND, &inflight->command, inflight, ctx);
 		inflight->retried  = true;
 	}
 
@@ -709,7 +708,7 @@ static int acmp_process_disconnect_tx_timeout(
 		acmp_tx_response(JDKSAVDECC_ACMP_MESSAGE_TYPE_DISCONNECT_RX_RESPONSE, &response, JDKSAVDECC_ACMP_STATUS_LISTENER_TALKER_TIMEOUT, ctx);
 		memset(inflight, 0, sizeof(struct acmp_inflight_command));
 	} else {
-		acmp_tx_command(JDKSAVDECC_ACMP_MESSAGE_TYPE_DISCONNECT_TX_COMMAND, &inflight->command, true, ctx);
+		acmp_tx_command(JDKSAVDECC_ACMP_MESSAGE_TYPE_DISCONNECT_TX_COMMAND, &inflight->command, inflight, ctx);
 		inflight->retried  = true;
 	}
 
