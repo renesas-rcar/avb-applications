@@ -41,11 +41,18 @@ libavdecc.a: $(OBJS)
 libjdksavdecc-c:
 	git submodule init
 	git submodule update
+
+libjdksavdecc-c/Makefile:
 	cd jdksavdecc-c; cmake -G "Unix Makefiles"
 
-libjdksavdecc-c.a: libjdksavdecc-c
-	cd jdksavdecc-c; make
+libjdksavdecc-c.a: libjdksavdecc-c/Makefile
+	$(MAKE) -C jdksavdecc-c
 
-clean:
+libjdksavdecc-c.clean: libjdksavdecc-c/Makefile
+	$(MAKE) -C jdksavdecc-c clean
+
+clean: libjdksavdecc-c.clean
 	$(RM) $(TARGET) $(OBJS)
-	cd jdksavdecc-c; make clean
+
+install:
+	# no operation

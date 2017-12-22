@@ -36,3 +36,6 @@ $(TARGET): $(OBJS)
 
 clean:
 	$(RM) $(TARGET) $(OBJS)
+
+install:
+	# no operation
