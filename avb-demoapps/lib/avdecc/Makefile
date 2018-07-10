@@ -42,7 +42,7 @@ libjdksavdecc-c:
 	git submodule init
 	git submodule update
 
-libjdksavdecc-c/Makefile:
+libjdksavdecc-c/Makefile: libjdksavdecc-c
 	cd jdksavdecc-c; cmake -G "Unix Makefiles"
 
 libjdksavdecc-c.a: libjdksavdecc-c/Makefile
