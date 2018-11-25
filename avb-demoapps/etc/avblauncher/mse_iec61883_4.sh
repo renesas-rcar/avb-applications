@@ -38,7 +38,7 @@ V4L2_MSE_DEVICE=`cat ${MSE_SYSFS}/${MSE}/info/device`
 
 if [ "x$TYPE" = "xtalker" ]; then
   gst-launch-1.0 \
-    filesrc location=./movie.ts ! \
+    filesrc location=./movie.ts blocksize=36096 ! \
     video/mpegts,systemstream=true ! \
     v4l2sink sync=true show-preroll-frame=false device=${V4L2_MSE_DEVICE}
 else
