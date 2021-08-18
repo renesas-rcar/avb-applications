@@ -7,6 +7,16 @@ TYPE=$1
 PRIORITY=$2
 PACKETIER=iec61883-4
 MSE_SYSFS=/sys/class/ravb_mse
+# If environment haven't supported for gst-omx, try with other SW codec
+`gst-inspect-1.0 | grep omx &> /dev/null`
+
+if [ $? -eq 0 ]; then
+  AUDIODEC=omxaaclcdec
+  VIDEODEC=omxh264dec
+else
+  AUDIODEC=avdec_aac
+  VIDEODEC='avdec_h264 ! videoconvert'
+fi
 
 if [ "x$TYPE" = "xtalker" ]; then
   TALKER_MAC_ADDR=`cat /sys/class/net/eth0/address | tr -d ":"`
@@ -46,13 +56,13 @@ else
     v4l2src device=${V4L2_MSE_DEVICE} ! queue ! \
     tsdemux name=demux ! queue ! \
       aacparse ! \
-      omxaaclcdec ! \
+      $AUDIODEC ! \
       audioconvert ! \
       audioresample ! \
       audio/x-raw,format=${ALSA_FORMAT},rate=${ALSA_SAMPLERATE},channels=${ALSA_CHANNELS} ! \
       alsasink device="${ALSA_DEVICE}" \
     demux. ! queue ! \
       h264parse ! \
-      omxh264dec ! \
+      $VIDEODEC ! \
       waylandsink sync=true
 fi

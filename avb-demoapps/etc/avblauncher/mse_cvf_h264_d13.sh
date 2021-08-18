@@ -36,12 +36,22 @@ V4L2_FRAMERATE_NUMERATOR=30
 V4L2_FRAMERATE_DENOMINATOR=1
 V4L2_FRAMERATE=${V4L2_FRAMERATE_NUMERATOR}/${V4L2_FRAMERATE_DENOMINATOR}
 V4L2_MSE_DEVICE=`cat ${MSE_SYSFS}/${MSE}/info/device`
+# If environment haven't supported for gst-omx, try with other SW codec
+`gst-inspect-1.0 | grep omx &> /dev/null`
+
+if [ $? -eq 0 ]; then
+  VIDEOENC='omxh264enc target-bitrate=15000000'
+  VIDEODEC=omxh264dec
+else
+  VIDEOENC='x264enc bitrate=15000'
+  VIDEODEC='avdec_h264 ! videoconvert'
+fi
 
 if [ "x$TYPE" = "xtalker" ]; then
   gst-launch-1.0 \
     videotestsrc ! \
     video/x-raw,width=${V4L2_WIDTH},height=${V4L2_HEIGHT},framerate=${V4L2_FRAMERATE} ! \
-    omxh264enc target-bitrate=15000000 ! \
+    $VIDEOENC ! \
     h264parse ! \
     video/x-h264,width=${V4L2_WIDTH},height=${V4L2_HEIGHT},framerate=${V4L2_FRAMERATE},stream-format=byte-stream,alignment=au ! \
     v4l2sink sync=true show-preroll-frame=false device=${V4L2_MSE_DEVICE}
@@ -50,6 +60,6 @@ else
     v4l2src device=${V4L2_MSE_DEVICE} ! \
     video/x-h264,width=${V4L2_WIDTH},height=${V4L2_HEIGHT},framerate=${V4L2_FRAMERATE},stream-format=byte-stream ! \
     h264parse ! \
-    omxh264dec ! \
+    $VIDEODEC ! \
     waylandsink sync=true
 fi
