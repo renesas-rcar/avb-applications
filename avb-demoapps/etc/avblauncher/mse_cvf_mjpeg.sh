@@ -37,6 +37,17 @@ V4L2_FRAMERATE_DENOMINATOR=1
 V4L2_FRAMERATE=${V4L2_FRAMERATE_NUMERATOR}/${V4L2_FRAMERATE_DENOMINATOR}
 V4L2_MSE_DEVICE=`cat ${MSE_SYSFS}/${MSE}/info/device`
 
+#
+# Special handling for D3
+#
+COMPATIBLE=$(tr -d '\0' </proc/device-tree/compatible)
+COMPATIBLE=`echo "${COMPATIBLE:(-8)}"`
+if [ "x$COMPATIBLE" = "xr8a77995" ]; then
+  FILTER="videoconvert ! video/x-raw,format=BGRA,width=${V4L2_WIDTH},height=${V4L2_HEIGHT} ! queue"
+else
+  FILTER="vspfitler ! video/x-raw,format=NV12,width=${V4L2_WIDTH},height=${V4L2_HEIGHT}"
+fi
+
 if [ "x$TYPE" = "xtalker" ]; then
   gst-launch-1.0 \
     videotestsrc ! \
@@ -52,7 +63,6 @@ else
     image/jpeg,width=${V4L2_WIDTH},height=${V4L2_HEIGHT},framerate=${V4L2_FRAMERATE} ! \
     jpegparse ! \
     jpegdec ! \
-    vspfilter ! \
-    video/x-raw,format=NV12,width=${V4L2_WIDTH},height=${V4L2_HEIGHT} ! \
+    $FILTER ! \
     waylandsink sync=true
 fi
