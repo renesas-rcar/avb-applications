@@ -45,7 +45,7 @@ COMPATIBLE=`echo "${COMPATIBLE:(-8)}"`
 if [ "x$COMPATIBLE" = "xr8a77995" ]; then
   FILTER="videoconvert ! video/x-raw,format=BGRA,width=${V4L2_WIDTH},height=${V4L2_HEIGHT} ! queue"
 else
-  FILTER="vspfitler ! video/x-raw,format=NV12,width=${V4L2_WIDTH},height=${V4L2_HEIGHT}"
+  FILTER="vspfilter ! video/x-raw,format=NV12,width=${V4L2_WIDTH},height=${V4L2_HEIGHT}"
 fi
 
 if [ "x$TYPE" = "xtalker" ]; then
